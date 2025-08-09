@@ -6,15 +6,30 @@ let package = Package(
     platforms: [
         .macOS(.v12)
     ],
-    dependencies: [],
+    dependencies: [
+        .package(url: "https://github.com/apple/swift-argument-parser", from: "1.2.0")
+    ],
     targets: [
         .executableTarget(
             name: "ScreenRecorder",
-            dependencies: [],
+            dependencies: [
+                .product(name: "ArgumentParser", package: "swift-argument-parser")
+            ],
             linkerSettings: [
                 .linkedFramework("ScreenCaptureKit"),
                 .linkedFramework("AVFoundation"),
                 .linkedFramework("CoreMedia"),
+                .linkedFramework("AppKit")
+            ]
+        ),
+        .testTarget(
+            name: "ScreenRecorderTests",
+            dependencies: ["ScreenRecorder"],
+            linkerSettings: [
+                .linkedFramework("ScreenCaptureKit"),
+                .linkedFramework("AVFoundation"),
+                .linkedFramework("CoreMedia"),
+                .linkedFramework("AppKit")
             ]
         )
     ]

@@ -3,41 +3,26 @@ import ScreenCaptureKit
 @preconcurrency import AVFoundation
 import AppKit
 
-// 音频设备切换功能
-func switchAudioOutput(to deviceName: String) {
-    let task = Process()
-    task.executableURL = URL(fileURLWithPath: "/opt/homebrew/bin/SwitchAudioSource")
-    task.arguments = ["-s", deviceName]
-    do {
-        try task.run()
-        task.waitUntilExit()
-        print("✅ 切换音频输出设备到：\(deviceName)")
-    } catch {
-        print("⚠️ 切换音频输出设备失败: \(error)")
-    }
-}
-
-@main
-struct ScreenRecorder {
-    static func main() async {
-        if #available(macOS 12.3, *) {
-            // 解析命令行参数
-            let args = CommandLine.arguments
-            // 第1参数：时长，毫秒，默认10000
-            let durationMs = (args.count > 1) ? Int(args[1]) ?? 10000 : 10000
-            // 第2参数：输出文件路径，默认空，使用当前目录下的 screenRecording.mov
-            let outputPath = (args.count > 2) ? args[2] : nil
-            // 第3参数：是否整屏录制，传 "full" 则为整屏，默认竖屏裁剪
-            let fullScreen = (args.count > 3) ? (args[3].lowercased() == "full") : false
-            
-            await record(durationMs: durationMs, outputPath: outputPath, fullScreen: fullScreen)
-        } else {
-            print("❌ 当前系统版本不支持 ScreenCaptureKit（需要 macOS 12.3+）")
+/// Legacy screen recorder implementation
+/// This will be refactored in later tasks into a more modular architecture
+class LegacyScreenRecorder {
+    
+    // 音频设备切换功能
+    static func switchAudioOutput(to deviceName: String) {
+        let task = Process()
+        task.executableURL = URL(fileURLWithPath: "/opt/homebrew/bin/SwitchAudioSource")
+        task.arguments = ["-s", deviceName]
+        do {
+            try task.run()
+            task.waitUntilExit()
+            print("✅ 切换音频输出设备到：\(deviceName)")
+        } catch {
+            print("⚠️ 切换音频输出设备失败: \(error)")
         }
     }
-
+    
     @available(macOS 12.3, *)
-    static func record(durationMs: Int, outputPath: String?, fullScreen: Bool) async {
+    static func record(durationMs: Int, outputPath: String?, fullScreen: Bool, fps: Int = 30, quality: VideoQuality = .medium, format: OutputFormat = .mov, showCursor: Bool = false) async {
         do {
             let content: SCShareableContent
             do {
@@ -103,7 +88,7 @@ struct ScreenRecorder {
             print("   源区域（逻辑坐标）: \(sourceRect)")
             print("   输出尺寸（实际像素）: \(captureWidth) × \(captureHeight)")
             config.pixelFormat = kCVPixelFormatType_32BGRA
-            config.minimumFrameInterval = CMTime(value: 1, timescale: 60)
+            config.minimumFrameInterval = CMTime(value: 1, timescale: CMTimeScale(fps))
             
             // 关键：确保捕获高分辨率内容
             config.scalesToFit = false  // 不要缩放以适应
@@ -114,7 +99,7 @@ struct ScreenRecorder {
             }
             config.colorSpaceName = CGColorSpace.displayP3
             config.backgroundColor = CGColor.clear
-            config.showsCursor = false
+            config.showsCursor = showCursor
             
             print("📹 录制配置:")
             print("   源区域（逻辑坐标）: \(sourceRect)")
@@ -140,25 +125,20 @@ struct ScreenRecorder {
 
             let writer: AVAssetWriter
             do {
-                writer = try AVAssetWriter(outputURL: outputURL, fileType: .mov)
+                writer = try AVAssetWriter(outputURL: outputURL, fileType: format.avFileType)
             } catch {
                 print("❌ 创建 AVAssetWriter 失败: \(error)")
                 return
             }
             
-            // 使用更高质量的视频设置
-            let settings: [String: Any] = [
-                AVVideoCodecKey: AVVideoCodecType.h264,
-                AVVideoWidthKey: captureWidth,
-                AVVideoHeightKey: captureHeight,
-                AVVideoCompressionPropertiesKey: [
-                    AVVideoAverageBitRateKey: captureWidth * captureHeight * 4, // 高比特率
-                    AVVideoProfileLevelKey: AVVideoProfileLevelH264HighAutoLevel,
-                    AVVideoH264EntropyModeKey: AVVideoH264EntropyModeCABAC,
-                    AVVideoExpectedSourceFrameRateKey: 60,
-                    AVVideoMaxKeyFrameIntervalKey: 60
-                ]
-            ]
+            // Create enhanced video settings using VideoSettings model
+            let videoSettings = VideoSettings.default(
+                fps: fps,
+                quality: quality,
+                resolution: CGSize(width: captureWidth, height: captureHeight),
+                showCursor: showCursor
+            )
+            let settings = videoSettings.avSettings
             let input = AVAssetWriterInput(mediaType: .video, outputSettings: settings)
             input.expectsMediaDataInRealTime = true
 
@@ -260,14 +240,37 @@ struct ScreenRecorder {
             // switchAudioOutput(to: "BlackHole 16ch")
             
             let durationSec = Double(durationMs) / 1000.0
-            print("✅ 开始录制（\(durationSec) 秒）...")
+            
+            // Start progress indicator
+            let progressIndicator = ProgressIndicator.startRecording(
+                outputURL: outputURL, 
+                duration: durationSec
+            )
+            
+            // Setup graceful shutdown handling
+            SignalHandler.shared.setupForRecording(
+                progressIndicator: progressIndicator
+            ) {
+                // Graceful shutdown callback
+                do {
+                    try await stream.stopCapture()
+                    input.markAsFinished()
+                    audioInput.markAsFinished()
+                } catch {
+                    print("⚠️ Error during graceful shutdown: \(error.localizedDescription)")
+                }
+            }
+            
+            // Record for the specified duration
             try await Task.sleep(nanoseconds: UInt64(durationMs * 1_000_000))
 
-            print("🛑 停止录制...")
+            progressIndicator.updateProgress(message: "Stopping recording...")
             do {
                 try await stream.stopCapture()
             } catch {
                 print("❌ 停止录制失败: \(error)")
+                progressIndicator.stopProgressWithError(error)
+                return
             }
             input.markAsFinished()
             audioInput.markAsFinished()
@@ -276,20 +279,26 @@ struct ScreenRecorder {
             try await withCheckedThrowingContinuation { continuation in
                 writer.finishWriting {
                     if writer.status == .completed {
-                        print("🎬 已保存视频: \(outputURL.path)")
+                        progressIndicator.stopProgress()
                         // 录制完成后切换回默认音频设备
                         // switchAudioOutput(to: "MacBook Pro Speakers")
                         continuation.resume()
                     } else if let error = writer.error {
+                        progressIndicator.stopProgressWithError(error)
                         // 出错时也要切换回默认音频设备
                         // switchAudioOutput(to: "MacBook Pro Speakers")
                         continuation.resume(throwing: error)
                     } else {
+                        let unknownError = NSError(domain: "com.screenrecorder", code: -1, userInfo: [NSLocalizedDescriptionKey: "未知写入错误"])
+                        progressIndicator.stopProgressWithError(unknownError)
                         // switchAudioOutput(to: "MacBook Pro Speakers")
-                        continuation.resume(throwing: NSError(domain: "com.screenrecorder", code: -1, userInfo: [NSLocalizedDescriptionKey: "未知写入错误"]))
+                        continuation.resume(throwing: unknownError)
                     }
                 }
             }
+            
+            // Clean up signal handler
+            SignalHandler.shared.cleanup()
 
         } catch {
             print("⚠️ 录制失败：\(error)")

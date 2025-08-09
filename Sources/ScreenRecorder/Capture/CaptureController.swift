@@ -1,0 +1,374 @@
+import Foundation
+import ScreenCaptureKit
+@preconcurrency import AVFoundation
+import AppKit
+import CoreGraphics
+
+/// Controls the actual screen capture process using ScreenCaptureKit
+/// Extracted from LegacyScreenRecorder to provide modular recording functionality
+@available(macOS 12.3, *)
+class CaptureController {
+    
+    /// Error types for capture operations
+    enum CaptureError: LocalizedError {
+        case contentRetrievalFailed(Error)
+        case streamCreationFailed(Error)
+        case captureStartFailed(Error)
+        case captureStopFailed(Error)
+        case configurationError(String)
+        
+        var errorDescription: String? {
+            switch self {
+            case .contentRetrievalFailed(let error):
+                return "Failed to retrieve shareable content: \(error.localizedDescription)"
+            case .streamCreationFailed(let error):
+                return "Failed to create capture stream: \(error.localizedDescription)"
+            case .captureStartFailed(let error):
+                return "Failed to start capture: \(error.localizedDescription)"
+            case .captureStopFailed(let error):
+                return "Failed to stop capture: \(error.localizedDescription)"
+            case .configurationError(let message):
+                return "Configuration error: \(message)"
+            }
+        }
+    }
+    
+    /// Delegate for handling capture output
+    private class CaptureDelegate: NSObject, SCStreamOutput {
+        let videoInput: AVAssetWriterInput
+        let audioInput: AVAssetWriterInput?
+        let adaptor: AVAssetWriterInputPixelBufferAdaptor
+        let writer: AVAssetWriter
+        private var startTime: CMTime?
+        
+        init(videoInput: AVAssetWriterInput, 
+             audioInput: AVAssetWriterInput?, 
+             adaptor: AVAssetWriterInputPixelBufferAdaptor, 
+             writer: AVAssetWriter) {
+            self.videoInput = videoInput
+            self.audioInput = audioInput
+            self.adaptor = adaptor
+            self.writer = writer
+        }
+        
+        func stream(_ stream: SCStream, didOutputSampleBuffer sampleBuffer: CMSampleBuffer, of outputType: SCStreamOutputType) {
+            let timestamp = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
+            
+            // Initialize session timing on first frame
+            if startTime == nil {
+                startTime = timestamp
+                writer.startSession(atSourceTime: startTime!)
+            }
+            
+            switch outputType {
+            case .screen:
+                guard let pixelBuffer = sampleBuffer.imageBuffer else { return }
+                if videoInput.isReadyForMoreMediaData {
+                    adaptor.append(pixelBuffer, withPresentationTime: timestamp)
+                }
+            case .audio:
+                if let audioInput = audioInput, audioInput.isReadyForMoreMediaData {
+                    audioInput.append(sampleBuffer)
+                }
+            default:
+                break
+            }
+        }
+    }
+    
+    /// Start screen capture with the given configuration
+    /// - Parameters:
+    ///   - config: Recording configuration
+    ///   - writer: AVAssetWriter for output
+    ///   - videoInput: Video input for the writer
+    ///   - audioInput: Optional audio input for the writer
+    ///   - adaptor: Pixel buffer adaptor for video
+    /// - Returns: SCStream instance for the capture
+    /// - Throws: CaptureError if capture setup fails
+    func startCapture(
+        with config: RecordingConfiguration,
+        writer: AVAssetWriter,
+        videoInput: AVAssetWriterInput,
+        audioInput: AVAssetWriterInput?,
+        adaptor: AVAssetWriterInputPixelBufferAdaptor
+    ) async throws -> SCStream {
+        
+        // Get shareable content
+        let content: SCShareableContent
+        do {
+            content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
+        } catch {
+            throw CaptureError.contentRetrievalFailed(error)
+        }
+        
+        // Create stream configuration
+        let streamConfig = try createStreamConfiguration(from: config, content: content)
+        
+        // Create content filter
+        let filter = try createContentFilter(from: config, content: content)
+        
+        // Create capture delegate
+        let delegate = CaptureDelegate(
+            videoInput: videoInput,
+            audioInput: audioInput,
+            adaptor: adaptor,
+            writer: writer
+        )
+        
+        // Create stream
+        let stream = SCStream(filter: filter, configuration: streamConfig, delegate: nil)
+        
+        // Add stream outputs
+        let videoQueue = DispatchQueue(label: "videoQueue", qos: .userInitiated)
+        let audioQueue = DispatchQueue(label: "audioQueue", qos: .userInitiated)
+        
+        do {
+            try stream.addStreamOutput(delegate, type: .screen, sampleHandlerQueue: videoQueue)
+        } catch {
+            throw CaptureError.captureStartFailed(error)
+        }
+        
+        // Add audio output if enabled
+        if config.audioSettings.hasAudio {
+            do {
+                if #available(macOS 13.0, *) {
+                    try stream.addStreamOutput(delegate, type: .audio, sampleHandlerQueue: audioQueue)
+                }
+            } catch {
+                print("⚠️ Warning: Failed to add audio output: \(error.localizedDescription)")
+                // Continue without audio rather than failing completely
+            }
+        }
+        
+        // Start capture
+        do {
+            try await stream.startCapture()
+        } catch {
+            throw CaptureError.captureStartFailed(error)
+        }
+        
+        return stream
+    }
+    
+    /// Stop screen capture
+    /// - Parameter stream: SCStream to stop
+    /// - Throws: CaptureError if stop fails
+    func stopCapture(_ stream: SCStream) async throws {
+        do {
+            try await stream.stopCapture()
+        } catch {
+            throw CaptureError.captureStopFailed(error)
+        }
+    }
+    
+    /// Create ScreenCaptureKit stream configuration from recording configuration
+    /// - Parameters:
+    ///   - config: Recording configuration
+    ///   - content: Shareable content for validation
+    /// - Returns: Configured SCStreamConfiguration
+    /// - Throws: CaptureError if configuration is invalid
+    private func createStreamConfiguration(
+        from config: RecordingConfiguration, 
+        content: SCShareableContent
+    ) throws -> SCStreamConfiguration {
+        
+        let streamConfig = SCStreamConfiguration()
+        
+        // Configure recording area and resolution
+        let (sourceRect, outputSize) = try calculateRecordingDimensions(
+            config: config, 
+            content: content
+        )
+        
+        streamConfig.sourceRect = sourceRect
+        streamConfig.width = Int(outputSize.width)
+        streamConfig.height = Int(outputSize.height)
+        
+        // Configure video settings
+        streamConfig.pixelFormat = kCVPixelFormatType_32BGRA
+        streamConfig.minimumFrameInterval = config.videoSettings.frameInterval
+        streamConfig.scalesToFit = false // Maintain original quality
+        streamConfig.showsCursor = config.videoSettings.showCursor
+        
+        // Configure color space and quality
+        streamConfig.colorSpaceName = CGColorSpace.displayP3
+        streamConfig.backgroundColor = CGColor.clear
+        
+        // Configure advanced settings for macOS 14+
+        if #available(macOS 14.0, *) {
+            streamConfig.queueDepth = 8
+        }
+        
+        // Configure audio if enabled
+        if config.audioSettings.hasAudio {
+            if #available(macOS 13.0, *) {
+                streamConfig.capturesAudio = true
+            }
+        }
+        
+        print("📹 Capture Configuration:")
+        print("   Source Rect: \(sourceRect)")
+        print("   Output Size: \(Int(outputSize.width)) × \(Int(outputSize.height))")
+        print("   Frame Rate: \(config.videoSettings.fps) fps")
+        print("   Show Cursor: \(config.videoSettings.showCursor)")
+        print("   Audio Enabled: \(config.audioSettings.hasAudio)")
+        
+        return streamConfig
+    }
+    
+    /// Create content filter based on recording configuration
+    /// - Parameters:
+    ///   - config: Recording configuration
+    ///   - content: Shareable content
+    /// - Returns: Configured SCContentFilter
+    /// - Throws: CaptureError if filter creation fails
+    private func createContentFilter(
+        from config: RecordingConfiguration,
+        content: SCShareableContent
+    ) throws -> SCContentFilter {
+        
+        switch config.recordingMode {
+        case .screen:
+            // Screen recording mode
+            let targetDisplay: SCDisplay
+            
+            if let screenInfo = config.targetScreen {
+                // Find the display matching the screen info
+                guard let display = content.displays.first(where: { $0.displayID == screenInfo.displayID }) else {
+                    throw CaptureError.configurationError("Target screen not found in available displays")
+                }
+                targetDisplay = display
+            } else {
+                // Use primary display
+                guard let display = content.displays.first else {
+                    throw CaptureError.configurationError("No displays available for recording")
+                }
+                targetDisplay = display
+            }
+            
+            return SCContentFilter(display: targetDisplay, excludingWindows: [])
+            
+        case .application:
+            // Application recording mode
+            guard let targetApp = config.targetApplication else {
+                throw CaptureError.configurationError("No target application specified for application recording")
+            }
+            
+            // Find the application in shareable content
+            guard content.applications.contains(where: { 
+                $0.bundleIdentifier == targetApp.bundleIdentifier 
+            }) else {
+                throw CaptureError.configurationError("Target application not found in shareable content")
+            }
+            
+            // Get windows for the application
+            let appWindows = content.windows.filter { window in
+                window.owningApplication?.bundleIdentifier == targetApp.bundleIdentifier
+            }
+            
+            if appWindows.isEmpty {
+                throw CaptureError.configurationError("No windows found for target application")
+            }
+            
+            return SCContentFilter(desktopIndependentWindow: appWindows.first!)
+        }
+    }
+    
+    /// Calculate recording dimensions based on configuration
+    /// - Parameters:
+    ///   - config: Recording configuration
+    ///   - content: Shareable content for screen information
+    /// - Returns: Tuple of source rect and output size
+    /// - Throws: CaptureError if calculation fails
+    private func calculateRecordingDimensions(
+        config: RecordingConfiguration,
+        content: SCShareableContent
+    ) throws -> (sourceRect: CGRect, outputSize: CGSize) {
+        
+        switch config.recordingMode {
+        case .screen:
+            return try calculateScreenRecordingDimensions(config: config, content: content)
+        case .application:
+            return try calculateApplicationRecordingDimensions(config: config, content: content)
+        }
+    }
+    
+    /// Calculate dimensions for screen recording
+    private func calculateScreenRecordingDimensions(
+        config: RecordingConfiguration,
+        content: SCShareableContent
+    ) throws -> (sourceRect: CGRect, outputSize: CGSize) {
+        
+        let targetDisplay: SCDisplay
+        
+        if let screenInfo = config.targetScreen {
+            guard let display = content.displays.first(where: { $0.displayID == screenInfo.displayID }) else {
+                throw CaptureError.configurationError("Target screen not found")
+            }
+            targetDisplay = display
+        } else {
+            guard let display = content.displays.first else {
+                throw CaptureError.configurationError("No displays available")
+            }
+            targetDisplay = display
+        }
+        
+        // Get screen information from NSScreen for scale factor
+        let screens = NSScreen.screens
+        guard let nsScreen = screens.first(where: { 
+            $0.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID == targetDisplay.displayID 
+        }) else {
+            throw CaptureError.configurationError("Could not find NSScreen for display")
+        }
+        
+        let scaleFactor = nsScreen.backingScaleFactor
+        let logicalFrame = nsScreen.frame
+        
+        // Calculate recording area
+        let recordingRect = config.recordingArea.toCGRect(for: ScreenInfo(
+            index: 1,
+            displayID: targetDisplay.displayID,
+            frame: logicalFrame,
+            name: "Display",
+            isPrimary: true,
+            scaleFactor: scaleFactor
+        ))
+        
+        // Convert to actual pixels
+        let actualWidth = Int(recordingRect.width * scaleFactor)
+        let actualHeight = Int(recordingRect.height * scaleFactor)
+        
+        return (
+            sourceRect: recordingRect,
+            outputSize: CGSize(width: actualWidth, height: actualHeight)
+        )
+    }
+    
+    /// Calculate dimensions for application recording
+    private func calculateApplicationRecordingDimensions(
+        config: RecordingConfiguration,
+        content: SCShareableContent
+    ) throws -> (sourceRect: CGRect, outputSize: CGSize) {
+        
+        guard let targetApp = config.targetApplication else {
+            throw CaptureError.configurationError("No target application specified")
+        }
+        
+        // Find application windows
+        let appWindows = content.windows.filter { window in
+            window.owningApplication?.bundleIdentifier == targetApp.bundleIdentifier
+        }
+        
+        guard let firstWindow = appWindows.first else {
+            throw CaptureError.configurationError("No windows found for application")
+        }
+        
+        // For application recording, use the window's frame
+        let windowFrame = firstWindow.frame
+        
+        return (
+            sourceRect: windowFrame,
+            outputSize: CGSize(width: windowFrame.width, height: windowFrame.height)
+        )
+    }
+}

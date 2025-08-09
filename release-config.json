@@ -1,0 +1,68 @@
+{
+  "name": "ScreenRecorder",
+  "version": "2.0.0",
+  "description": "Professional screen recording tool for macOS with comprehensive CLI interface",
+  "homepage": "https://github.com/your-username/ScreenRecorder",
+  "license": "MIT",
+  "author": "Your Name",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/ScreenRecorder.git"
+  },
+  "system_requirements": {
+    "macos_minimum": "12.3",
+    "xcode_minimum": "14.3",
+    "swift_minimum": "5.6",
+    "frameworks": [
+      "ScreenCaptureKit",
+      "AVFoundation", 
+      "CoreMedia",
+      "AppKit"
+    ]
+  },
+  "build": {
+    "configuration": "release",
+    "architectures": ["arm64", "x86_64"],
+    "optimization": "speed",
+    "strip_symbols": true,
+    "binary_name": "screenrecorder",
+    "output_formats": ["binary", "archive"]
+  },
+  "homebrew": {
+    "formula_name": "screenrecorder",
+    "tap_name": "your-username/screenrecorder",
+    "dependencies": {
+      "build": ["xcode"],
+      "runtime": []
+    },
+    "test_commands": [
+      "--version",
+      "--help", 
+      "--screen-list",
+      "--app-list",
+      "--list-presets"
+    ]
+  },
+  "distribution": {
+    "platforms": ["macos"],
+    "channels": ["homebrew", "github_releases", "manual"],
+    "archive_formats": ["tar.gz", "zip"],
+    "checksums": ["sha256", "sha512"]
+  },
+  "permissions": {
+    "required": ["screen_recording"],
+    "optional": ["microphone"]
+  },
+  "features": [
+    "Multi-screen support",
+    "Application window recording", 
+    "Audio recording with microphone",
+    "Flexible area selection",
+    "Quality controls (fps, bitrate)",
+    "Multiple output formats (MOV, MP4)",
+    "Preset management",
+    "Countdown timer",
+    "Cursor visibility control",
+    "Comprehensive CLI interface"
+  ]
+}
