@@ -243,6 +243,8 @@ class OutputManager {
     func createVideoInput(for config: RecordingConfiguration) throws -> AVAssetWriterInput {
         let settings = config.videoSettings.avSettings
         
+
+        
         let input = AVAssetWriterInput(mediaType: .video, outputSettings: settings)
         input.expectsMediaDataInRealTime = true
         return input
@@ -266,6 +268,8 @@ class OutputManager {
     ///   - resolution: Recording resolution
     /// - Returns: Configured AVAssetWriterInputPixelBufferAdaptor
     func createPixelBufferAdaptor(for input: AVAssetWriterInput, resolution: CGSize) -> AVAssetWriterInputPixelBufferAdaptor {
+
+        
         let pixelBufferAttributes: [String: Any] = [
             kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA,
             kCVPixelBufferWidthKey as String: Int(resolution.width),

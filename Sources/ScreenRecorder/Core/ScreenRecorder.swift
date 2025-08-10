@@ -189,34 +189,87 @@ class ScreenRecorder {
         }
         
         // Update video settings with actual resolution
-        if let screen = resolvedConfig.targetScreen {
+        let actualResolution: CGSize
+        
+        if resolvedConfig.recordingMode == .application, let targetApp = resolvedConfig.targetApplication {
+            // 🔧 修复：应用录制的分辨率计算
+            if let window = targetApp.windows.first {
+                // 获取窗口所在屏幕的缩放因子
+                let windowCenter = CGPoint(
+                    x: window.frame.origin.x + window.frame.width / 2,
+                    y: window.frame.origin.y + window.frame.height / 2
+                )
+                
+                let screens = NSScreen.screens
+                var scaleFactor: CGFloat = 1.0
+                var containingScreen: NSScreen?
+                
+                for screen in screens {
+                    if screen.frame.contains(windowCenter) {
+                        scaleFactor = screen.backingScaleFactor
+                        containingScreen = screen
+                        break
+                    }
+                }
+                
+                if scaleFactor == 1.0 {
+                    scaleFactor = NSScreen.main?.backingScaleFactor ?? 1.0
+                    containingScreen = NSScreen.main
+                }
+                
+                // 🔧 关键修复：使用窗口的实际尺寸计算像素分辨率
+                // 确保录制分辨率与窗口实际大小完全匹配
+                let windowWidth = window.frame.width
+                let windowHeight = window.frame.height
+                
+                // 计算像素分辨率
+                actualResolution = CGSize(
+                    width: windowWidth * scaleFactor,
+                    height: windowHeight * scaleFactor
+                )
+                
+                print("🔍 Application Resolution Calculation:")
+                print("   Window frame: \(Int(window.frame.origin.x)), \(Int(window.frame.origin.y)), \(Int(windowWidth)) × \(Int(windowHeight))")
+                print("   Containing screen: \(containingScreen?.localizedName ?? "Unknown")")
+                print("   Scale factor: \(scaleFactor)x")
+                print("   Final resolution: \(Int(actualResolution.width)) × \(Int(actualResolution.height)) pixels")
+            } else {
+                // Fallback if no windows found
+                actualResolution = CGSize(width: 1920, height: 1080)
+                print("⚠️ No windows found for application, using fallback resolution")
+            }
+        } else if let screen = resolvedConfig.targetScreen {
+            // Screen recording - use screen-based calculation
             let recordingRect = resolvedConfig.recordingArea.toCGRect(for: screen)
             // recordingRect already includes scale factor from toCGRect, don't apply it again
-            let actualResolution = CGSize(
+            actualResolution = CGSize(
                 width: recordingRect.width,
                 height: recordingRect.height
             )
-            
-            let updatedVideoSettings = VideoSettings(
-                fps: resolvedConfig.videoSettings.fps,
-                quality: resolvedConfig.videoSettings.quality,
-                codec: resolvedConfig.videoSettings.codec,
-                showCursor: resolvedConfig.videoSettings.showCursor,
-                resolution: actualResolution
-            )
-            
-            resolvedConfig = RecordingConfiguration(
-                duration: resolvedConfig.duration,
-                outputURL: resolvedConfig.outputURL,
-                outputFormat: resolvedConfig.outputFormat,
-                recordingArea: resolvedConfig.recordingArea,
-                targetScreen: resolvedConfig.targetScreen,
-                targetApplication: resolvedConfig.targetApplication,
-                audioSettings: resolvedConfig.audioSettings,
-                videoSettings: updatedVideoSettings,
-                countdown: resolvedConfig.countdown
-            )
+        } else {
+            // Fallback resolution
+            actualResolution = resolvedConfig.videoSettings.resolution
         }
+        
+        let updatedVideoSettings = VideoSettings(
+            fps: resolvedConfig.videoSettings.fps,
+            quality: resolvedConfig.videoSettings.quality,
+            codec: resolvedConfig.videoSettings.codec,
+            showCursor: resolvedConfig.videoSettings.showCursor,
+            resolution: actualResolution
+        )
+        
+        resolvedConfig = RecordingConfiguration(
+            duration: resolvedConfig.duration,
+            outputURL: resolvedConfig.outputURL,
+            outputFormat: resolvedConfig.outputFormat,
+            recordingArea: resolvedConfig.recordingArea,
+            targetScreen: resolvedConfig.targetScreen,
+            targetApplication: resolvedConfig.targetApplication,
+            audioSettings: resolvedConfig.audioSettings,
+            videoSettings: updatedVideoSettings,
+            countdown: resolvedConfig.countdown
+        )
         
         return resolvedConfig
     }
@@ -257,8 +310,12 @@ class ScreenRecorder {
         }
         
         // Validate recording area
-        let screenIndex = config.targetScreen?.index ?? 1
-        try displayManager.validateArea(config.recordingArea, for: screenIndex)
+        if config.recordingMode == .screen {
+            // Only validate against screen for screen recording
+            let screenIndex = config.targetScreen?.index ?? 1
+            try displayManager.validateArea(config.recordingArea, for: screenIndex)
+        }
+        // For application recording, we don't need to validate against screen bounds
         
         // Validate output path
         try outputManager.validateOutputPath(config.outputURL)

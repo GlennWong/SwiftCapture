@@ -79,6 +79,9 @@ class CaptureController {
             switch outputType {
             case .screen:
                 guard let pixelBuffer = sampleBuffer.imageBuffer else { return }
+                
+
+                
                 if videoInput.isReadyForMoreMediaData && !shouldStop {
                     let success = adaptor.append(pixelBuffer, withPresentationTime: timestamp)
                     frameCount += 1
@@ -220,8 +223,28 @@ class CaptureController {
         // Configure video settings
         streamConfig.pixelFormat = kCVPixelFormatType_32BGRA
         streamConfig.minimumFrameInterval = config.videoSettings.frameInterval
-        streamConfig.scalesToFit = false // Maintain original quality
         streamConfig.showsCursor = config.videoSettings.showCursor
+        
+        // 🔧 修复：对于应用录制的特殊配置
+        if config.recordingMode == .application {
+            // 应用录制时的关键设置
+            streamConfig.scalesToFit = false  // 禁用自动缩放
+            
+            // 版本兼容的设置
+            if #available(macOS 14.0, *) {
+                streamConfig.preservesAspectRatio = true  // 保持宽高比
+                streamConfig.captureResolution = .best
+            }
+            
+            // 对于应用录制，不设置sourceRect，让系统自动处理
+            if sourceRect == CGRect.null {
+                // 不设置sourceRect，使用完整窗口
+                print("   Using full window capture (no sourceRect)")
+            }
+        } else {
+            // 屏幕录制时保持原有设置
+            streamConfig.scalesToFit = false
+        }
         
         // Configure color space and quality
         streamConfig.colorSpaceName = CGColorSpace.displayP3
@@ -395,31 +418,42 @@ class CaptureController {
             throw CaptureError.configurationError("No target application specified")
         }
         
-        // Find application windows
+        // Find application windows in ScreenCaptureKit content
         let appWindows = content.windows.filter { window in
             window.owningApplication?.bundleIdentifier == targetApp.bundleIdentifier
         }
         
-        guard let firstWindow = appWindows.first else {
-            throw CaptureError.configurationError("No windows found for application")
+        guard let scWindow = appWindows.first else {
+            throw CaptureError.configurationError("No windows found for target application")
         }
         
-        // For application recording, use the window's frame
-        let windowFrame = firstWindow.frame
+        // Get the ScreenCaptureKit window frame (this is already in the correct coordinate system)
+        let scWindowFrame = scWindow.frame
         
         // Find the display that contains this window to get the correct scale factor
         let windowCenter = CGPoint(
-            x: windowFrame.origin.x + windowFrame.width / 2,
-            y: windowFrame.origin.y + windowFrame.height / 2
+            x: scWindowFrame.origin.x + scWindowFrame.width / 2,
+            y: scWindowFrame.origin.y + scWindowFrame.height / 2
         )
         
         // Get the display containing the window center
         let screens = NSScreen.screens
         var scaleFactor: CGFloat = 1.0
+        var containingScreen: NSScreen?
         
         for screen in screens {
-            if screen.frame.contains(windowCenter) {
+            // Convert screen frame to match ScreenCaptureKit coordinate system
+            let screenFrame = screen.frame
+            let flippedScreenFrame = CGRect(
+                x: screenFrame.origin.x,
+                y: screenFrame.origin.y,
+                width: screenFrame.width,
+                height: screenFrame.height
+            )
+            
+            if flippedScreenFrame.contains(windowCenter) {
                 scaleFactor = screen.backingScaleFactor
+                containingScreen = screen
                 break
             }
         }
@@ -427,15 +461,29 @@ class CaptureController {
         // If no screen contains the window center, use the main screen's scale factor
         if scaleFactor == 1.0 {
             scaleFactor = NSScreen.main?.backingScaleFactor ?? 1.0
+            containingScreen = NSScreen.main
         }
         
-        // Calculate actual pixel dimensions for high-DPI displays
-        let actualWidth = Int(windowFrame.width * scaleFactor)
-        let actualHeight = Int(windowFrame.height * scaleFactor)
+        // 🔧 修复：使用ScreenCaptureKit窗口的实际尺寸
+        // ScreenCaptureKit已经提供了正确的窗口边界，不需要额外的坐标转换
+        let actualWidth = scWindowFrame.width
+        let actualHeight = scWindowFrame.height
         
+        // 计算输出像素尺寸 - 使用实际窗口尺寸乘以缩放因子
+        let outputWidth = Int(actualWidth * scaleFactor)
+        let outputHeight = Int(actualHeight * scaleFactor)
+        
+        print("🔍 Application Recording Debug:")
+        print("   SCWindow Frame: \(Int(scWindowFrame.origin.x)), \(Int(scWindowFrame.origin.y)), \(Int(actualWidth)) × \(Int(actualHeight))")
+        print("   Scale Factor: \(scaleFactor)x")
+        print("   Output Size (pixels): \(outputWidth) × \(outputHeight)")
+        print("   Containing Screen: \(containingScreen?.localizedName ?? "Unknown")")
+        
+        // 🔧 关键修复：不使用sourceRect，让ScreenCaptureKit自动处理窗口边界
+        // 对于应用窗口录制，sourceRect应该设置为CGRect.null或窗口的完整区域
         return (
-            sourceRect: windowFrame,
-            outputSize: CGSize(width: actualWidth, height: actualHeight)
+            sourceRect: CGRect.null, // 让ScreenCaptureKit自动使用完整窗口区域
+            outputSize: CGSize(width: outputWidth, height: outputHeight)
         )
     }
 }

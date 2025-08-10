@@ -152,22 +152,32 @@ class ApplicationManager {
             // Get window bounds
             var windowFrame = CGRect.zero
             if let boundsDict = windowDict[kCGWindowBounds as String] as? [String: Any] {
-                windowFrame = CGRect(
-                    x: boundsDict["X"] as? CGFloat ?? 0,
-                    y: boundsDict["Y"] as? CGFloat ?? 0,
-                    width: boundsDict["Width"] as? CGFloat ?? 0,
-                    height: boundsDict["Height"] as? CGFloat ?? 0
-                )
+                let x = boundsDict["X"] as? CGFloat ?? 0
+                let y = boundsDict["Y"] as? CGFloat ?? 0
+                let width = boundsDict["Width"] as? CGFloat ?? 0
+                let height = boundsDict["Height"] as? CGFloat ?? 0
+                
+                // 🔧 修复：确保窗口坐标正确
+                // CGWindowListCopyWindowInfo返回的坐标已经是屏幕坐标系
+                windowFrame = CGRect(x: x, y: y, width: width, height: height)
             }
             
             // Check if window is on screen
             let isOnScreen = windowDict[kCGWindowIsOnscreen as String] as? Bool ?? false
             
-            // Skip windows that are too small (likely system windows)
-            guard windowFrame.width > 50 && windowFrame.height > 50 else {
+            // 🔧 修复：更严格的窗口过滤条件
+            // 跳过太小的窗口（可能是系统窗口或工具栏）
+            guard windowFrame.width > 100 && windowFrame.height > 50 else {
                 continue
             }
             
+            // 跳过没有标题且很小的窗口（通常是辅助窗口）
+            if windowTitle.isEmpty && (windowFrame.width < 200 || windowFrame.height < 100) {
+                continue
+            }
+            
+            // 🔧 修复：优先选择主窗口
+            // 通常主窗口有标题且尺寸较大
             let windowInfo = WindowInfo(
                 windowID: windowID,
                 title: windowTitle,
@@ -178,8 +188,21 @@ class ApplicationManager {
             windows.append(windowInfo)
         }
         
-        // Sort windows by title for consistent output
-        return windows.sorted { $0.title.lowercased() < $1.title.lowercased() }
+        // 🔧 修复：改进窗口排序逻辑
+        // 优先显示有标题的窗口，然后按尺寸排序（大窗口优先）
+        return windows.sorted { lhs, rhs in
+            // 有标题的窗口优先
+            if !lhs.title.isEmpty && rhs.title.isEmpty {
+                return true
+            } else if lhs.title.isEmpty && !rhs.title.isEmpty {
+                return false
+            }
+            
+            // 都有标题或都没标题时，按窗口面积排序（大窗口优先）
+            let lhsArea = lhs.frame.width * lhs.frame.height
+            let rhsArea = rhs.frame.width * rhs.frame.height
+            return lhsArea > rhsArea
+        }
     }
     
     /// Validates that an application is suitable for recording

@@ -35,6 +35,9 @@ class ConfigurationManager {
         let recordingArea: RecordingArea
         if let areaString = command.area {
             recordingArea = try validator.validateArea(areaString)
+        } else if command.app != nil {
+            // For application recording, we'll set the area based on the window size later
+            recordingArea = baseConfig?.recordingArea ?? .fullScreen
         } else {
             recordingArea = baseConfig?.recordingArea ?? .fullScreen
         }

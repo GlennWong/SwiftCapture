@@ -85,7 +85,38 @@ struct VideoSettings {
     
     /// Create comprehensive video settings dictionary for AVAssetWriter
     var avSettings: [String: Any] {
-        var compressionProperties = quality.compressionSettings
+        var compressionProperties: [String: Any] = [:]
+        
+        // 🔧 修复：根据编解码器类型设置正确的压缩属性
+        switch codec {
+        case .h264:
+            // H.264 特定设置
+            compressionProperties = quality.compressionSettings
+        case .hevc:
+            // HEVC 特定设置 - 不使用 H.264 特定的属性
+            switch quality {
+            case .low:
+                compressionProperties = [
+                    AVVideoMaxKeyFrameIntervalKey: 120
+                ]
+            case .medium:
+                compressionProperties = [
+                    AVVideoMaxKeyFrameIntervalKey: 90
+                ]
+            case .high:
+                compressionProperties = [
+                    AVVideoMaxKeyFrameIntervalKey: 60,
+                    AVVideoAllowFrameReorderingKey: true
+                ]
+            }
+        default:
+            // 其他编解码器的基本设置
+            compressionProperties = [
+                AVVideoMaxKeyFrameIntervalKey: fps * 3
+            ]
+        }
+        
+        // 添加通用设置
         compressionProperties[AVVideoAverageBitRateKey] = bitRate
         compressionProperties[AVVideoExpectedSourceFrameRateKey] = fps
         
@@ -100,7 +131,7 @@ struct VideoSettings {
         case 60:
             // High frame rate - optimize for smooth motion
             compressionProperties[AVVideoMaxKeyFrameIntervalKey] = 180 // 3 seconds at 60fps
-            if quality == .high {
+            if quality == .high && codec == .h264 {
                 compressionProperties[AVVideoAllowFrameReorderingKey] = true
             }
         default:
