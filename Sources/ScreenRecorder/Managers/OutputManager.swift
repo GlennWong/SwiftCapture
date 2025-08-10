@@ -346,9 +346,8 @@ class OutputManager {
         videoInput: AVAssetWriterInput,
         audioInput: AVAssetWriterInput?
     ) async throws {
-        // Mark inputs as finished
-        videoInput.markAsFinished()
-        audioInput?.markAsFinished()
+        // Inputs should already be marked as finished by the caller
+        // This avoids double-marking which could cause issues
         
         // Wait for writing to complete
         try await withCheckedThrowingContinuation { continuation in

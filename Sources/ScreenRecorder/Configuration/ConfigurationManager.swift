@@ -86,9 +86,10 @@ class ConfigurationManager {
         let actualResolution: CGSize
         if let screen = targetScreen {
             let recordingRect = recordingArea.toCGRect(for: screen)
+            // recordingRect already includes scale factor, don't apply it again
             actualResolution = CGSize(
-                width: recordingRect.width * screen.scaleFactor,
-                height: recordingRect.height * screen.scaleFactor
+                width: recordingRect.width,
+                height: recordingRect.height
             )
         } else {
             // Placeholder resolution for application recording

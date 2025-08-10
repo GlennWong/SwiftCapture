@@ -146,7 +146,20 @@ struct ScreenRecorderCommand: AsyncParsableCommand {
     private func validateArea() throws {
         guard let areaString = area else { return }
         
+        // Parse the area string first
         let components = areaString.split(separator: ":")
+        
+        // Handle centered area format: center:width:height
+        if components.count == 3 && components[0].lowercased() == "center" {
+            guard let width = Int(components[1]),
+                  let height = Int(components[2]),
+                  width > 0, height > 0 else {
+                throw ValidationError.invalidArea("Invalid centered area format. Expected: center:width:height")
+            }
+            return
+        }
+        
+        // Handle standard area format: x:y:width:height
         guard components.count == 4 else {
             throw ValidationError.invalidAreaFormat(areaString)
         }
@@ -164,6 +177,25 @@ struct ScreenRecorderCommand: AsyncParsableCommand {
                 "Invalid area dimensions: width and height must be greater than 0.",
                 suggestion: "Ensure width (3rd value) and height (4th value) are positive, like --area 0:0:1920:1080"
             )
+        }
+        
+        // Validate area against the specified screen (or default screen 1)
+        // This ensures the area fits within the target screen bounds
+        if #available(macOS 12.3, *) {
+            do {
+                let displayManager = DisplayManager()
+                let recordingArea = try RecordingArea.parse(from: areaString)
+                try displayManager.validateArea(recordingArea, for: screen)
+            } catch let error as ScreenRecorderError {
+                // Convert ScreenRecorderError to ValidationError for consistent CLI output
+                throw ValidationError(error.localizedDescription ?? "Area validation failed")
+            } catch let error as ValidationError {
+                // Re-throw ValidationError as-is
+                throw error
+            } catch {
+                // Handle any other errors
+                throw ValidationError("Area validation failed: \(error.localizedDescription)")
+            }
         }
     }
     
@@ -388,10 +420,10 @@ struct ScreenRecorderCommand: AsyncParsableCommand {
         }
         
         print("💡 Usage Examples:")
-        print("  screenrecorder --screen 1                    # Record primary display")
-        print("  screenrecorder --screen 2                    # Record secondary display")
-        print("  screenrecorder --screen 1 --area 0:0:1920:1080  # Record 1080p area on primary")
-        print("  screenrecorder --screen 2 --area 0:0:1920:1080  # Record full secondary display")
+        print("  screenrecorder --screen 1                          # Record primary display")
+        print("  screenrecorder --screen 2                          # Record secondary display")
+        print("  screenrecorder --screen 1 --area 0:0:1920:1080     # Record 1080p area on primary")
+        print("  screenrecorder --screen 2 --area 0:0:1920:1080     # Record full secondary display")
         print("")
         print("📝 Note: Screen indices may change when displays are connected/disconnected.")
         print("   Run --screen-list again if your display setup changes.")
@@ -406,16 +438,16 @@ struct ScreenRecorderCommand: AsyncParsableCommand {
         }
         
         print("💡 Usage Examples:")
-        print("  screenrecorder --app Safari                    # Record Safari windows")
-        print("  screenrecorder --app \"Final Cut Pro\"          # Record app with spaces in name")
-        print("  screenrecorder --app com.apple.Safari         # Use bundle identifier")
+        print("  screenrecorder --app Safari                        # Record Safari windows")
+        print("  screenrecorder --app \"Final Cut Pro\"             # Record app with spaces in name")
+        print("  screenrecorder --app com.apple.Safari              # Use bundle identifier")
         print("")
         print("📝 Notes:")
         print("\nUse --app <name> to record a specific application")
         print("")
         print("💡 Usage:")
-        print("  screenrecorder --app Safari        # Record Safari windows")
-        print("  screenrecorder --app \"Final Cut Pro\"  # Record app with spaces in name")
+        print("  screenrecorder --app Safari                        # Record Safari windows")
+        print("  screenrecorder --app \"Final Cut Pro\"             # Record app with spaces in name")
         print("")
         print("📝 Note: Application names are case-sensitive. Use exact names as shown above.")
     }
@@ -560,10 +592,12 @@ struct ScreenRecorderCommand: AsyncParsableCommand {
             
             let videoQuality = VideoQuality(rawValue: quality.lowercased()) ?? .medium
             let outputFormat = OutputFormat(rawValue: format.lowercased()) ?? .mov
-            await LegacyScreenRecorder.record(
+            await LegacyScreenRecorder.recordWithArea(
                 durationMs: duration,
                 outputPath: outputPath,
                 fullScreen: fullScreen,
+                areaString: area,
+                screenIndex: screen,
                 fps: fps,
                 quality: videoQuality,
                 format: outputFormat,

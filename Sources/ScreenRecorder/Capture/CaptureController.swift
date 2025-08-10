@@ -9,6 +9,8 @@ import CoreGraphics
 @available(macOS 12.3, *)
 class CaptureController {
     
+    private var currentDelegate: CaptureDelegate?
+    
     /// Error types for capture operations
     enum CaptureError: LocalizedError {
         case contentRetrievalFailed(Error)
@@ -40,6 +42,9 @@ class CaptureController {
         let adaptor: AVAssetWriterInputPixelBufferAdaptor
         let writer: AVAssetWriter
         private var startTime: CMTime?
+        private var shouldStop = false
+        private var frameCount = 0
+        private var audioSampleCount = 0
         
         init(videoInput: AVAssetWriterInput, 
              audioInput: AVAssetWriterInput?, 
@@ -51,7 +56,16 @@ class CaptureController {
             self.writer = writer
         }
         
+        func stopCapture() {
+            shouldStop = true
+        }
+        
         func stream(_ stream: SCStream, didOutputSampleBuffer sampleBuffer: CMSampleBuffer, of outputType: SCStreamOutputType) {
+            // Stop processing if we've been told to stop
+            if shouldStop {
+                return
+            }
+            
             let timestamp = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
             
             // Initialize session timing on first frame
@@ -60,15 +74,25 @@ class CaptureController {
                 writer.startSession(atSourceTime: startTime!)
             }
             
+            // Don't check duration here - let the main recording loop handle timing
+            
             switch outputType {
             case .screen:
                 guard let pixelBuffer = sampleBuffer.imageBuffer else { return }
-                if videoInput.isReadyForMoreMediaData {
-                    adaptor.append(pixelBuffer, withPresentationTime: timestamp)
+                if videoInput.isReadyForMoreMediaData && !shouldStop {
+                    let success = adaptor.append(pixelBuffer, withPresentationTime: timestamp)
+                    frameCount += 1
+                    if !success {
+                        print("⚠️ Failed to append video frame at timestamp: \(CMTimeGetSeconds(timestamp))")
+                    }
                 }
             case .audio:
-                if let audioInput = audioInput, audioInput.isReadyForMoreMediaData {
-                    audioInput.append(sampleBuffer)
+                if let audioInput = audioInput, audioInput.isReadyForMoreMediaData && !shouldStop {
+                    let success = audioInput.append(sampleBuffer)
+                    audioSampleCount += 1
+                    if !success {
+                        print("⚠️ Failed to append audio sample at timestamp: \(CMTimeGetSeconds(timestamp))")
+                    }
                 }
             default:
                 break
@@ -115,6 +139,9 @@ class CaptureController {
             writer: writer
         )
         
+        // Store delegate reference for later use
+        self.currentDelegate = delegate
+        
         // Create stream
         let stream = SCStream(filter: filter, configuration: streamConfig, delegate: nil)
         
@@ -154,11 +181,17 @@ class CaptureController {
     /// - Parameter stream: SCStream to stop
     /// - Throws: CaptureError if stop fails
     func stopCapture(_ stream: SCStream) async throws {
+        // First tell the delegate to stop processing new frames
+        currentDelegate?.stopCapture()
+        
         do {
             try await stream.stopCapture()
         } catch {
             throw CaptureError.captureStopFailed(error)
         }
+        
+        // Clear delegate reference
+        currentDelegate = nil
     }
     
     /// Create ScreenCaptureKit stream configuration from recording configuration
@@ -324,7 +357,7 @@ class CaptureController {
         let scaleFactor = nsScreen.backingScaleFactor
         let logicalFrame = nsScreen.frame
         
-        // Calculate recording area
+        // Calculate recording area (now in pixel coordinates)
         let recordingRect = config.recordingArea.toCGRect(for: ScreenInfo(
             index: 1,
             displayID: targetDisplay.displayID,
@@ -334,12 +367,20 @@ class CaptureController {
             scaleFactor: scaleFactor
         ))
         
-        // Convert to actual pixels
-        let actualWidth = Int(recordingRect.width * scaleFactor)
-        let actualHeight = Int(recordingRect.height * scaleFactor)
+        // Recording rect is already in pixel coordinates, no need to multiply by scale factor
+        let actualWidth = Int(recordingRect.width)
+        let actualHeight = Int(recordingRect.height)
+        
+        // Convert pixel coordinates back to logical coordinates for ScreenCaptureKit
+        let logicalSourceRect = CGRect(
+            x: recordingRect.origin.x / scaleFactor,
+            y: recordingRect.origin.y / scaleFactor,
+            width: recordingRect.width / scaleFactor,
+            height: recordingRect.height / scaleFactor
+        )
         
         return (
-            sourceRect: recordingRect,
+            sourceRect: logicalSourceRect,
             outputSize: CGSize(width: actualWidth, height: actualHeight)
         )
     }
@@ -366,9 +407,35 @@ class CaptureController {
         // For application recording, use the window's frame
         let windowFrame = firstWindow.frame
         
+        // Find the display that contains this window to get the correct scale factor
+        let windowCenter = CGPoint(
+            x: windowFrame.origin.x + windowFrame.width / 2,
+            y: windowFrame.origin.y + windowFrame.height / 2
+        )
+        
+        // Get the display containing the window center
+        let screens = NSScreen.screens
+        var scaleFactor: CGFloat = 1.0
+        
+        for screen in screens {
+            if screen.frame.contains(windowCenter) {
+                scaleFactor = screen.backingScaleFactor
+                break
+            }
+        }
+        
+        // If no screen contains the window center, use the main screen's scale factor
+        if scaleFactor == 1.0 {
+            scaleFactor = NSScreen.main?.backingScaleFactor ?? 1.0
+        }
+        
+        // Calculate actual pixel dimensions for high-DPI displays
+        let actualWidth = Int(windowFrame.width * scaleFactor)
+        let actualHeight = Int(windowFrame.height * scaleFactor)
+        
         return (
             sourceRect: windowFrame,
-            outputSize: CGSize(width: windowFrame.width, height: windowFrame.height)
+            outputSize: CGSize(width: actualWidth, height: actualHeight)
         )
     }
 }

@@ -31,6 +31,9 @@ extension ScreenInfo: Equatable {
 extension ScreenInfo: CustomStringConvertible {
     var description: String {
         let primaryText = isPrimary ? " (Primary)" : ""
-        return "Screen \(index): \(name) - \(Int(frame.width))x\(Int(frame.height))\(primaryText)"
+        // Display pixel resolution only
+        let pixelWidth = Int(frame.width * scaleFactor)
+        let pixelHeight = Int(frame.height * scaleFactor)
+        return "Screen \(index): \(name) - \(pixelWidth)x\(pixelHeight)\(primaryText)"
     }
 }

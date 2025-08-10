@@ -19,6 +19,7 @@ class DisplayManager {
         for screen in screens {
             print("  \(screen)")
         }
+        print("")
     }
     
     /// Gets information for a specific screen by index
@@ -107,7 +108,7 @@ class DisplayManager {
     /// Validates a recording area against a specific screen
     /// - Parameters:
     ///   - area: The recording area to validate
-    ///   - screenIndex: 1-based screen index to validate against
+    ///   - screenIndex: 1-based screen index to validate against (defaults to 1 if not specified)
     /// - Throws: ScreenRecorderError or ValidationError if validation fails
     func validateArea(_ area: RecordingArea, for screenIndex: Int) throws {
         let screen = try getScreen(at: screenIndex)

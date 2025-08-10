@@ -12,36 +12,102 @@ enum RecordingArea: Equatable {
     /// Record a centered area with specified dimensions
     case centered(width: Int, height: Int)
     
-    /// Convert the recording area to a CGRect for the given screen
+    /// Convert the recording area to a CGRect for the given screen (using pixel coordinates)
     /// - Parameter screen: The target screen information
-    /// - Returns: CGRect representing the recording area
+    /// - Returns: CGRect representing the recording area in pixel coordinates
     func toCGRect(for screen: ScreenInfo) -> CGRect {
+        let screenFrame = screen.frame
+        let scaleFactor = screen.scaleFactor
+        
         switch self {
         case .fullScreen:
-            return screen.frame
+            // Return the full screen in pixel coordinates
+            return CGRect(
+                x: screenFrame.origin.x * scaleFactor,
+                y: screenFrame.origin.y * scaleFactor,
+                width: screenFrame.width * scaleFactor,
+                height: screenFrame.height * scaleFactor
+            )
             
         case .customRect(let rect):
+            // Custom rect is already in pixel coordinates, return as-is
             return rect
             
         case .centered(let width, let height):
-            let screenFrame = screen.frame
-            let x = screenFrame.origin.x + (screenFrame.width - CGFloat(width)) / 2
-            let y = screenFrame.origin.y + (screenFrame.height - CGFloat(height)) / 2
+            // Calculate centered position in pixel coordinates
+            let pixelWidth = screenFrame.width * scaleFactor
+            let pixelHeight = screenFrame.height * scaleFactor
+            let x = screenFrame.origin.x * scaleFactor + (pixelWidth - CGFloat(width)) / 2
+            let y = screenFrame.origin.y * scaleFactor + (pixelHeight - CGFloat(height)) / 2
             return CGRect(x: x, y: y, width: CGFloat(width), height: CGFloat(height))
         }
     }
     
-    /// Validates that the recording area is within screen bounds
+    /// Convert the recording area to a CGRect for ScreenCaptureKit (using logical coordinates)
+    /// - Parameter screen: The target screen information
+    /// - Returns: CGRect representing the recording area in logical coordinates for SCStreamConfiguration
+    func toLogicalRect(for screen: ScreenInfo) -> CGRect {
+        let screenFrame = screen.frame
+        let scaleFactor = screen.scaleFactor
+        
+        switch self {
+        case .fullScreen:
+            // Return the full screen in logical coordinates
+            return screenFrame
+            
+        case .customRect(let rect):
+            // Convert pixel coordinates to logical coordinates
+            return CGRect(
+                x: rect.origin.x / scaleFactor,
+                y: rect.origin.y / scaleFactor,
+                width: rect.width / scaleFactor,
+                height: rect.height / scaleFactor
+            )
+            
+        case .centered(let width, let height):
+            // Calculate centered position in logical coordinates
+            let logicalWidth = screenFrame.width
+            let logicalHeight = screenFrame.height
+            let x = screenFrame.origin.x + (logicalWidth - CGFloat(width) / scaleFactor) / 2
+            let y = screenFrame.origin.y + (logicalHeight - CGFloat(height) / scaleFactor) / 2
+            return CGRect(x: x, y: y, width: CGFloat(width) / scaleFactor, height: CGFloat(height) / scaleFactor)
+        }
+    }
+    
+    /// Validates that the recording area is within screen bounds (using pixel coordinates)
     /// - Parameter screen: The target screen information
     /// - Throws: ValidationError if the area is outside screen bounds
     func validate(against screen: ScreenInfo) throws {
         let recordingRect = self.toCGRect(for: screen)
         let screenFrame = screen.frame
+        let pixelWidth = screenFrame.width * screen.scaleFactor
+        let pixelHeight = screenFrame.height * screen.scaleFactor
         
-        // Check if recording area is completely within screen bounds
-        guard screenFrame.contains(recordingRect) else {
+        // For custom rectangles, validate against the pixel coordinate space
+        let isWithinBounds: Bool
+        switch self {
+        case .fullScreen:
+            // Full screen is always valid for the target screen
+            isWithinBounds = true
+            
+        case .customRect(let rect):
+            // For custom rectangles, check if the area fits within the screen's pixel bounds
+            // All coordinates are now treated as pixel coordinates
+            isWithinBounds = rect.origin.x >= 0 &&
+                           rect.origin.y >= 0 &&
+                           rect.maxX <= pixelWidth &&
+                           rect.maxY <= pixelHeight
+            
+        case .centered(let width, let height):
+            // For centered areas, check if the dimensions fit within the screen pixel dimensions
+            isWithinBounds = CGFloat(width) <= pixelWidth && CGFloat(height) <= pixelHeight
+        }
+        
+        guard isWithinBounds else {
             let errorMessage: String
             let suggestion: String
+            let pixelWidthInt = Int(pixelWidth)
+            let pixelHeightInt = Int(pixelHeight)
             
             switch self {
             case .fullScreen:
@@ -50,12 +116,12 @@ enum RecordingArea: Equatable {
                 suggestion = "This should not happen. Please report this issue."
                 
             case .customRect(let rect):
-                errorMessage = "Recording area \(Int(rect.origin.x)):\(Int(rect.origin.y)):\(Int(rect.width)):\(Int(rect.height)) extends beyond screen bounds"
-                suggestion = "Screen \(screen.index) is \(Int(screenFrame.width))x\(Int(screenFrame.height)). Adjust coordinates to fit within screen bounds."
+                errorMessage = "Recording area \(Int(rect.origin.x)):\(Int(rect.origin.y)):\(Int(rect.width)):\(Int(rect.height)) extends beyond screen \(screen.index) bounds"
+                suggestion = "Screen \(screen.index) (\(screen.name)) has dimensions \(pixelWidthInt)x\(pixelHeightInt) (pixels). Adjust coordinates to fit within screen bounds."
                 
             case .centered(let width, let height):
                 errorMessage = "Centered area \(width)x\(height) is too large for screen \(screen.index)"
-                suggestion = "Screen \(screen.index) is \(Int(screenFrame.width))x\(Int(screenFrame.height)). Use smaller dimensions or try --area 0:0:\(Int(screenFrame.width)):\(Int(screenFrame.height)) for full screen."
+                suggestion = "Screen \(screen.index) (\(screen.name)) has dimensions \(pixelWidthInt)x\(pixelHeightInt) (pixels). Use smaller dimensions or try --area 0:0:\(pixelWidthInt):\(pixelHeightInt) for full screen."
             }
             
             throw ValidationError(errorMessage, suggestion: suggestion)

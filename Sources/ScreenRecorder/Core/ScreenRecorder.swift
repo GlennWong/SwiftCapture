@@ -41,10 +41,10 @@ class ScreenRecorder {
         // Setup output components
         let (writer, videoInput, audioInput, adaptor) = try outputManager.setupRecording(for: finalConfig)
         
-        // Start progress indicator
-        let progressIndicator = ProgressIndicator.startRecording(
+        // Create progress indicator but don't start it yet
+        let progressIndicator = ProgressIndicator(
             outputURL: finalConfig.outputURL,
-            duration: finalConfig.duration
+            expectedDuration: finalConfig.duration
         )
         
         // Setup graceful shutdown handling
@@ -70,20 +70,56 @@ class ScreenRecorder {
                 adaptor: adaptor
             )
             
-            // Record for the specified duration
-            let durationNanoseconds = UInt64(finalConfig.duration * 1_000_000_000)
+            // Start progress indicator after capture is actually started
+            progressIndicator.startProgress()
+            
+            // Wait for the exact duration
+            let durationSeconds = finalConfig.duration
+            let durationNanoseconds = UInt64(durationSeconds * 1_000_000_000)
             try await Task.sleep(nanoseconds: durationNanoseconds)
             
             // Stop capture
             progressIndicator.updateProgress(message: "Stopping recording...")
+            
+            // Stop the capture stream first
             try await captureController.stopCapture(captureStream!)
             
-            // Finalize output
-            try await outputManager.finalizeRecording(
-                writer: writer,
-                videoInput: videoInput,
-                audioInput: audioInput
-            )
+            // Mark inputs as finished after stopping capture
+            videoInput.markAsFinished()
+            if let audioInput = audioInput {
+                audioInput.markAsFinished()
+            }
+            
+            // Finalize output with timeout protection
+            let finalizeStartTime = Date()
+            do {
+                try await withThrowingTaskGroup(of: Void.self) { group in
+                    // 文件写入任务
+                    group.addTask {
+                        try await self.outputManager.finalizeRecording(
+                            writer: writer,
+                            videoInput: videoInput,
+                            audioInput: audioInput
+                        )
+                    }
+                    
+                    // 超时检查任务 (3秒超时)
+                    group.addTask {
+                        try await Task.sleep(nanoseconds: 3_000_000_000)
+                        throw NSError(domain: "FinalizationTimeout", code: -1, 
+                                    userInfo: [NSLocalizedDescriptionKey: "文件写入超时"])
+                    }
+                    
+                    try await group.next()
+                    group.cancelAll()
+                }
+            } catch {
+                let finalizeDuration = Date().timeIntervalSince(finalizeStartTime)
+                print("⚠️ 文件写入耗时: \(String(format: "%.2f", finalizeDuration))秒")
+                if finalizeDuration >= 3.0 {
+                    print("⚠️ 文件写入超时，文件可能不完整")
+                }
+            }
             
             // Complete progress indicator
             progressIndicator.stopProgress()
@@ -155,9 +191,10 @@ class ScreenRecorder {
         // Update video settings with actual resolution
         if let screen = resolvedConfig.targetScreen {
             let recordingRect = resolvedConfig.recordingArea.toCGRect(for: screen)
+            // recordingRect already includes scale factor from toCGRect, don't apply it again
             let actualResolution = CGSize(
-                width: recordingRect.width * screen.scaleFactor,
-                height: recordingRect.height * screen.scaleFactor
+                width: recordingRect.width,
+                height: recordingRect.height
             )
             
             let updatedVideoSettings = VideoSettings(
