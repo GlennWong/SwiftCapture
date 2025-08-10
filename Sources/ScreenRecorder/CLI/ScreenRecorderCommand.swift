@@ -188,7 +188,7 @@ struct ScreenRecorderCommand: AsyncParsableCommand {
                 try displayManager.validateArea(recordingArea, for: screen)
             } catch let error as ScreenRecorderError {
                 // Convert ScreenRecorderError to ValidationError for consistent CLI output
-                throw ValidationError(error.localizedDescription ?? "Area validation failed")
+                throw ValidationError(error.localizedDescription)
             } catch let error as ValidationError {
                 // Re-throw ValidationError as-is
                 throw error

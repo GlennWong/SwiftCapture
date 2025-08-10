@@ -81,16 +81,10 @@ extension SignalHandler {
             Task { @MainActor in
                 progressIndicator?.updateProgress(message: "Stopping recording gracefully...")
                 
-                do {
-                    await onGracefulStop()
-                    progressIndicator?.stopProgress()
-                    print("✅ Recording stopped gracefully")
-                    exit(130) // Standard exit code for SIGINT
-                } catch {
-                    progressIndicator?.stopProgressWithError(error)
-                    print("❌ Error during graceful shutdown: \(error.localizedDescription)")
-                    exit(1)
-                }
+                await onGracefulStop()
+                progressIndicator?.stopProgress()
+                print("✅ Recording stopped gracefully")
+                exit(130) // Standard exit code for SIGINT
             }
         }
     }

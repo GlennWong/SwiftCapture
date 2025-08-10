@@ -293,6 +293,23 @@ class AudioManager {
                     print("      Connected: \(device.isConnected)")
                 }
             }
+        } else if #available(macOS 10.15, *) {
+            let discoverySession = AVCaptureDevice.DiscoverySession(
+                deviceTypes: [.builtInMicrophone],
+                mediaType: .audio,
+                position: .unspecified
+            )
+            
+            let inputDevices = discoverySession.devices
+            if inputDevices.isEmpty {
+                print("   📱 No audio input devices found")
+            } else {
+                for (index, device) in inputDevices.enumerated() {
+                    print("   📱 Input \(index + 1): \(device.localizedName)")
+                    print("      ID: \(device.uniqueID)")
+                    print("      Connected: \(device.isConnected)")
+                }
+            }
         } else {
             // Fallback for older macOS versions
             let inputDevices = AVCaptureDevice.devices(for: .audio)
