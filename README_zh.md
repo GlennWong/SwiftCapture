@@ -3,6 +3,12 @@
 一个专业的 macOS 屏幕录制工具，基于 ScreenCaptureKit 开发，支持强大的命令行界面、多屏录制、应用窗口录制，以及高级音视频控制。
 
 ```sh
+# 原生工具
+
+screencapture -i Downloads/test.mp4 -V 3
+
+# ----
+
 # 查看屏幕列表
 ./.build/release/ScreenRecorder --screen-list
 
@@ -28,7 +34,9 @@
 # 查看运行App列表
 ./.build/release/ScreenRecorder --app-list
 # 录制App
-./.build/release/ScreenRecorder --duration 5000 --app NetEaseMusic
+./.build/release/ScreenRecorder --duration 5000 --app NetEaseMusic --format mp4
+
+./.build/release/ScreenRecorder --duration 5000 --app IINA --format mp4
 ```
 
 ## Issues

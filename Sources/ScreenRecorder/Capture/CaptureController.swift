@@ -120,6 +120,22 @@ class CaptureController {
         adaptor: AVAssetWriterInputPixelBufferAdaptor
     ) async throws -> SCStream {
         
+        // 🔧 修复：对于应用录制，先将应用置于前台
+        if config.recordingMode == .application, let targetApp = config.targetApplication {
+            do {
+                let appManager = ApplicationManager()
+                try appManager.bringApplicationToFront(targetApp)
+                
+                // 给系统更多时间来完成窗口切换和桌面空间切换
+                try await Task.sleep(nanoseconds: 1_000_000_000) // 1秒
+                
+                print("   Waiting for application to be fully visible...")
+            } catch {
+                print("⚠️ Warning: Could not bring application to front: \(error.localizedDescription)")
+                print("   Recording will continue, but the application may be obscured")
+            }
+        }
+        
         // Get shareable content
         let content: SCShareableContent
         do {
@@ -323,10 +339,32 @@ class CaptureController {
             }
             
             if appWindows.isEmpty {
-                throw CaptureError.configurationError("No windows found for target application")
+                throw CaptureError.configurationError("No windows found for target application '\(targetApp.name)'")
             }
             
-            return SCContentFilter(desktopIndependentWindow: appWindows.first!)
+            // 🔧 修复：选择最佳窗口进行录制
+            // 优先选择有标题且尺寸较大的窗口（通常是主窗口）
+            let bestWindow = appWindows.max { lhs, rhs in
+                // 首先比较是否有标题
+                let lhsHasTitle = !(lhs.title?.isEmpty ?? true)
+                let rhsHasTitle = !(rhs.title?.isEmpty ?? true)
+                
+                if lhsHasTitle != rhsHasTitle {
+                    return rhsHasTitle // 有标题的窗口优先
+                }
+                
+                // 如果都有标题或都没标题，比较窗口面积
+                let lhsArea = lhs.frame.width * lhs.frame.height
+                let rhsArea = rhs.frame.width * rhs.frame.height
+                return lhsArea < rhsArea // 面积大的窗口优先
+            } ?? appWindows.first!
+            
+            print("🎯 Selected window for recording:")
+            print("   Title: '\((bestWindow.title?.isEmpty ?? true) ? "Untitled" : bestWindow.title!)'")
+            print("   Size: \(Int(bestWindow.frame.width)) × \(Int(bestWindow.frame.height))")
+            print("   Position: (\(Int(bestWindow.frame.origin.x)), \(Int(bestWindow.frame.origin.y)))")
+            
+            return SCContentFilter(desktopIndependentWindow: bestWindow)
         }
     }
     
@@ -423,9 +461,25 @@ class CaptureController {
             window.owningApplication?.bundleIdentifier == targetApp.bundleIdentifier
         }
         
-        guard let scWindow = appWindows.first else {
-            throw CaptureError.configurationError("No windows found for target application")
+        guard !appWindows.isEmpty else {
+            throw CaptureError.configurationError("No windows found for target application '\(targetApp.name)'")
         }
+        
+        // 🔧 修复：使用与内容过滤器相同的窗口选择逻辑
+        let scWindow = appWindows.max { lhs, rhs in
+            // 首先比较是否有标题
+            let lhsHasTitle = !(lhs.title?.isEmpty ?? true)
+            let rhsHasTitle = !(rhs.title?.isEmpty ?? true)
+            
+            if lhsHasTitle != rhsHasTitle {
+                return rhsHasTitle // 有标题的窗口优先
+            }
+            
+            // 如果都有标题或都没标题，比较窗口面积
+            let lhsArea = lhs.frame.width * lhs.frame.height
+            let rhsArea = rhs.frame.width * rhs.frame.height
+            return lhsArea < rhsArea // 面积大的窗口优先
+        } ?? appWindows.first!
         
         // Get the ScreenCaptureKit window frame (this is already in the correct coordinate system)
         let scWindowFrame = scWindow.frame
@@ -474,6 +528,12 @@ class CaptureController {
         let outputHeight = Int(actualHeight * scaleFactor)
         
         print("🔍 Application Recording Debug:")
+        print("   Found \(appWindows.count) windows for '\(targetApp.name)'")
+        for (index, window) in appWindows.enumerated() {
+            let title = (window.title?.isEmpty ?? true) ? "Untitled" : window.title!
+            print("     \(index + 1). '\(title)' - \(Int(window.frame.width))×\(Int(window.frame.height))")
+        }
+        print("   Selected Window: '\((scWindow.title?.isEmpty ?? true) ? "Untitled" : scWindow.title!)'")
         print("   SCWindow Frame: \(Int(scWindowFrame.origin.x)), \(Int(scWindowFrame.origin.y)), \(Int(actualWidth)) × \(Int(actualHeight))")
         print("   Scale Factor: \(scaleFactor)x")
         print("   Output Size (pixels): \(outputWidth) × \(outputHeight)")

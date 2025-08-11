@@ -585,8 +585,20 @@ struct ScreenRecorderCommand: AsyncParsableCommand {
         } catch {
             print("❌ Recording error: \(error.localizedDescription)")
             
-            // Fallback to legacy recording if new architecture fails
-            print("⚠️ Falling back to legacy recording...")
+            // 🔧 修复：检查是否是应用录制模式
+            if let appName = app {
+                print("❌ Application recording failed for '\(appName)'")
+                print("💡 Possible solutions:")
+                print("   1. Make sure '\(appName)' is running and has visible windows")
+                print("   2. The app has been automatically brought to front - please wait a moment")
+                print("   3. Grant Screen Recording permissions in System Preferences")
+                print("   4. Use exact application name from --app-list")
+                print("   5. If recording from fullscreen Terminal, the app should now be visible")
+                return
+            }
+            
+            // Fallback to legacy recording only for screen recording
+            print("⚠️ Falling back to legacy screen recording...")
             let outputPath = generateOutputPath()
             let fullScreen = (area == nil)
             
