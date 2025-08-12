@@ -7,7 +7,7 @@ set -e
 
 # Configuration
 FORMULA_PATH="Formula/scap.rb"
-TAP_NAME="your-username/scap"
+TAP_NAME="GlennWong/scap"
 BINARY_NAME="scap"
 
 # Colors for output

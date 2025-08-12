@@ -218,7 +218,7 @@ System Requirements:
 - Screen Recording permission
 - Microphone permission (optional, for --enable-microphone)
 
-For more information, visit: https://github.com/your-username/SwiftCapture
+For more information, visit: https://github.com/GlennWong/SwiftCapture
 EOF
 
 # Generate checksums

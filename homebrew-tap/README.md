@@ -6,7 +6,7 @@ This is the official Homebrew tap for SwiftCapture, a professional screen record
 
 ```bash
 # Add the tap
-brew tap your-username/scap
+brew tap GlennWong/scap
 
 # Install SwiftCapture
 brew install scap
@@ -16,7 +16,7 @@ brew install scap
 
 ```bash
 # Install directly from this tap
-brew install your-username/scap/scap
+brew install GlennWong/scap/scap
 ```
 
 ## Usage
@@ -59,9 +59,9 @@ SwiftCapture requires Screen Recording permission to function:
 
 ## Support
 
-- [GitHub Repository](https://github.com/your-username/SwiftCapture)
-- [Issues](https://github.com/your-username/SwiftCapture/issues)
-- [Documentation](https://github.com/your-username/SwiftCapture#readme)
+- [GitHub Repository](https://github.com/GlennWong/SwiftCapture)
+- [Issues](https://github.com/GlennWong/SwiftCapture/issues)
+- [Documentation](https://github.com/GlennWong/SwiftCapture#readme)
 
 ## License
 

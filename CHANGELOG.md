@@ -165,8 +165,8 @@ swift build -c release
 ## Support
 
 - **Documentation**: [README.md](README.md) | [README_zh.md](README_zh.md)
-- **Issues**: [GitHub Issues](https://github.com/your-username/ScreenRecorder/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/your-username/ScreenRecorder/discussions)
+- **Issues**: [GitHub Issues](https://github.com/GlennWong/ScreenRecorder/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/GlennWong/ScreenRecorder/discussions)
 - **License**: MIT License
 
 ## Contributing

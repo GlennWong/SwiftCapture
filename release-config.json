@@ -2,12 +2,12 @@
   "name": "SwiftCapture",
   "version": "2.0.0",
   "description": "Professional screen recording tool for macOS with comprehensive CLI interface",
-  "homepage": "https://github.com/your-username/SwiftCapture",
+  "homepage": "https://github.com/GlennWong/SwiftCapture",
   "license": "MIT",
   "author": "Your Name",
   "repository": {
     "type": "git",
-    "url": "https://github.com/your-username/SwiftCapture.git"
+    "url": "https://github.com/GlennWong/SwiftCapture.git"
   },
   "system_requirements": {
     "macos_minimum": "12.3",
@@ -30,7 +30,7 @@
   },
   "homebrew": {
     "formula_name": "swiftcapture",
-    "tap_name": "your-username/swiftcapture",
+    "tap_name": "GlennWong/swiftcapture",
     "dependencies": {
       "build": ["xcode"],
       "runtime": []
