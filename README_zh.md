@@ -1,164 +1,84 @@
-# SwiftCapture 屏幕录制工具
+# SwiftCapture
 
-一个专业的 macOS 屏幕录制工具，基于 ScreenCaptureKit 开发，支持强大的命令行界面、多屏录制、应用窗口录制，以及高级音视频控制。
+[English](README.md) | [中文](README_zh.md)
 
-```sh
-# 原生工具
+基于 ScreenCaptureKit 构建的专业 macOS 屏幕录制工具，具有全面的命令行界面、多屏幕支持、应用程序窗口录制和高级音视频控制功能。
 
-screencapture -i Downloads/test.mp4 -V 3
+## 功能特性
 
-# ----
-
-# 查看屏幕列表
-./.build/release/SwiftCapture --screen-list
-
-# 录制屏幕
-
-
-# 正常录制
-./.build/release/SwiftCapture \
- --screen 2 \
- --area 0:0:1620:2160 \
- --duration 5000 \
- --format mp4 \
- --output ~/Desktop/presentation.mp4
-
-# Built In Screen
-./.build/release/SwiftCapture \
- --screen 1 \
- --area 0:74:1417:1890 \
- --duration 5000 \
- --format mp4 \
- --output ~/Desktop/presentation-1.mp4
-
-# 查看运行App列表
-./.build/release/SwiftCapture --app-list
-# 录制App
-./.build/release/SwiftCapture --duration 5000 --app NetEaseMusic --format mp4
-
-./.build/release/SwiftCapture --duration 5000 --app IINA --format mp4
-```
-
-## Issues
-
-- Issue 1: duration 默认改为 10 秒，但实际输出的视频不够 10 秒
-- Issue 2: 窗口录制分辨率问题
-- Issue 3: 代码中所有的内容、录制过程中的输出信息全部用英文
-- Issue 4: 简化 --help 的输出信息
-
-只保留以下即可：
-
-```
-• Use --help for this comprehensive help information
-• Use --screen-list to identify available displays
-• Use --app-list to see recordable applications
-• Use --list-presets to see saved configurations
-• Check system permissions in System Preferences > Security & Privacy
-
-USAGE: scap <options>
-
-OPTIONS:
-  -d, --duration <duration>
-                          Recording duration in milliseconds (default: 10000) (default: 10000)
-  -o, --output <output>   Output file path (default: current directory with timestamp)
-  -a, --area <area>       Recording area in format x:y:width:height (default: full screen)
-  -l, --screen-list       List all available screens with their indices
-  -s, --screen <screen>   Screen index to record from (1=primary, 2+=secondary) (default: 1)
-  -L, --app-list          List all running applications
-  -A, --app <app>         Application name to record (instead of screen)
-  -e, --enable-microphone Enable microphone recording
-  --audio-quality <audio-quality>
-                          Audio quality: low, medium, or high (default: medium) (default: medium)
-  --fps <fps>             Frame rate: 15, 30, or 60 fps (default: 30) (default: 30)
-  --quality <quality>     Quality preset: low, medium, or high (default: medium) (default: medium)
-  --format <format>       Output format: mov or mp4 (default: mov) (default: mov)
-  --show-cursor           Show cursor in recording
-  --countdown <countdown> Countdown seconds before recording starts (default: 0) (default: 0)
-  --save-preset <save-preset>
-                          Save current settings as a named preset
-  --preset <preset>       Load settings from a saved preset
-  --list-presets          List all saved presets
-  --delete-preset <delete-preset>
-                          Delete a saved preset
-  --version               Show the version.
-  -h, --help, --help      Show help information.
-```
-
-## 功能特色
-
-- **专业命令行界面**：基于 Swift ArgumentParser，体验强大 CLI
-- **多屏支持**：自动检测并录制任意连接的显示器
-- **应用窗口录制**：可录制指定应用窗口而非整个屏幕
-- **高级音频控制**：支持系统音频录制，可选麦克风输入
+- **专业命令行界面**：基于 Swift ArgumentParser 构建，提供强大的命令行体验
+- **多屏幕支持**：支持从任何连接的显示器录制，自动检测屏幕
+- **应用程序窗口录制**：录制特定应用程序而非整个屏幕
+- **高级音频控制**：系统音频录制，可选麦克风输入
 - **灵活区域选择**：支持全屏、自定义区域或居中区域录制
-- **画质控制**：可配置帧率（15/30/60 fps）和画质预设
+- **质量控制**：可配置帧率（15/30/60 fps）和质量预设
 - **多种输出格式**：支持 MOV 和 MP4 格式
-- **预设管理**：保存并复用录制配置
-- **倒计时功能**：录制前可设置倒计时
-- **鼠标指针控制**：可选择是否在录制中显示鼠标
-- **详细帮助文档**：包含丰富用例和故障排查指南
+- **预设管理**：保存和重用录制配置
+- **倒计时功能**：录制开始前的可选倒计时
+- **光标控制**：在录制中显示或隐藏光标
+- **全面帮助**：详细的使用示例和故障排除指南
 
 ## 系统要求
 
-- **macOS 12.3 及以上**（ScreenCaptureKit 必需）
-- **Xcode 14.3 及以上**（源码编译）
-- **系统偏好设置中开启屏幕录制权限**
+- **macOS 12.3 或更高版本**（ScreenCaptureKit 必需）
+- **Xcode 14.3 或更高版本**（从源码构建时需要）
+- **屏幕录制权限**（在系统偏好设置中）
 - **麦克风权限**（仅在使用 `--enable-microphone` 时需要）
 
-## 安装方法
+## 安装
 
-### 源码安装
+### 从源码构建
 
 ```bash
 # 克隆仓库
 git clone <repository-url>
 cd SwiftCapture
 
-# 编译发布版本
+# 构建发布版本
 swift build -c release
 
-# 可执行文件位置：
+# 可执行文件位于：
 .build/release/SwiftCapture
 ```
 
-### Homebrew（即将上线）
+### Homebrew（即将推出）
 
 ```bash
-# 即将通过 Homebrew 提供
-brew install scap
+# 将通过 Homebrew 提供
+brew install swiftcapture
 ```
 
 ## 快速开始
 
 ```bash
-# 基础 10 秒录制
+# 基本 10 秒录制
 scap
 
 # 录制 30 秒
 scap --duration 30000
 
-# 保存到指定文件
+# 录制到指定文件
 scap --output ~/Desktop/demo.mov
 
-# 录制并包含麦克风音频
+# 录制时包含麦克风音频
 scap --enable-microphone --duration 15000
 ```
 
-## 用法说明
+## 使用方法
 
 ### 基本语法
 
 ```bash
-scap [OPTIONS]
+scap [选项]
 ```
 
-### 时长控制
+### 持续时间控制
 
 ```bash
-# 指定录制时长（毫秒）
+# 录制指定持续时间（毫秒）
 scap --duration 5000          # 5 秒
-scap -d 30000                 # 30 秒（短参数）
-scap --duration 120000        # 2 分钟
+scap -d 30000                  # 30 秒（短标志）
+scap --duration 120000         # 2 分钟
 ```
 
 ### 输出文件管理
@@ -168,20 +88,26 @@ scap --duration 120000        # 2 分钟
 scap --output ~/Desktop/recording.mov
 scap -o ./videos/demo.mp4
 
-# 默认：当前目录下按时间戳命名（YYYY-MM-DD_HH-MM-SS.mov）
-scap  # 生成如：2024-01-15_14-30-25.mov
+# 默认：当前目录，带时间戳（YYYY-MM-DD_HH-MM-SS.mov）
+scap  # 创建：2024-01-15_14-30-25.mov
+
+# 文件冲突处理
+scap --output existing.mov    # 交互式提示：覆盖、自动编号或取消
+scap --output existing.mov --force  # 强制覆盖，无提示
+# 自动编号：existing-2.mov, existing-3.mov 等
 ```
 
-### 屏幕与显示器选择
+### 屏幕和显示器选择
 
 ```bash
-# 列出可用屏幕	scap --screen-list
+# 列出可用屏幕
+scap --screen-list
 scap -l
 
-# 录制指定屏幕
+# 从指定屏幕录制
 scap --screen 1               # 主显示器
-scap --screen 2               # 次显示器
-scap -s 2                     # 短参数
+scap --screen 2               # 副显示器
+scap -s 2                     # 短标志
 ```
 
 ### 区域选择
@@ -189,65 +115,76 @@ scap -s 2                     # 短参数
 ```bash
 # 录制指定区域（x:y:width:height）
 scap --area 0:0:1920:1080     # 全高清区域
-scap --area 100:100:800:600   # 800x600，起点 100,100
-scap -a 0:0:1280:720          # 720p 区域（短参数）
+scap --area 100:100:800:600   # 位置 100,100 的 800x600 区域
+scap -a 0:0:1280:720          # 720p 区域（短标志）
 
-# 可与屏幕选择组合
+# 居中区域录制（center:width:height）
+scap --area center:1280:720   # 屏幕居中的 720p
+scap --area center:800:600    # 800x600 居中区域
+
+# 与屏幕选择结合
 scap --screen 2 --area 0:0:1920:1080
 ```
 
-### 应用窗口录制
+### 应用程序窗口录制
 
 ```bash
-# 列出正在运行的应用	scap --app-list
+# 列出运行中的应用程序
+scap --app-list
 scap -L
 
-# 录制指定应用窗口
+# 录制指定应用程序
 scap --app Safari
-scap --app "Final Cut Pro"    # 带空格需加引号
-scap -A Terminal              # 短参数
+scap --app "Final Cut Pro"    # 带空格的名称需要引号
+scap -A Terminal               # 短标志
+
+# 智能应用程序录制功能：
+# - 自动选择主窗口（最大的有标题窗口）
+# - 录制前将应用程序置于前台
+# - 跨多个桌面空间工作
+# - 处理窗口切换和激活
 ```
 
 ### 音频录制
 
 ```bash
-# 启用麦克风录制（系统音频默认包含）
+# 启用麦克风录制（始终包含系统音频）
 scap --enable-microphone
-scap -m                       # 短参数
+scap -m                       # 短标志
 
 # 设置音频质量
 scap --enable-microphone --audio-quality high
 ```
 
-### 画质与格式选项
+### 质量和格式选项
 
 ```bash
 # 帧率控制
-scap --fps 15                 # 静态内容建议
+scap --fps 15                 # 适用于静态内容
 scap --fps 30                 # 标准（默认）
 scap --fps 60                 # 流畅运动
 
-# 画质预设
-scap --quality low            # 文件较小（约 2Mbps）
-scap --quality medium         # 平衡（默认，约 5Mbps）
-scap --quality high           # 最佳画质（约 10Mbps）
+# 质量预设
+scap --quality low            # 较小文件（~2Mbps）
+scap --quality medium         # 平衡（默认，~5Mbps）
+scap --quality high           # 最佳质量（~10Mbps）
 
 # 输出格式
 scap --format mov             # QuickTime（默认）
-scap --format mp4             # MP4，兼容性更好
+scap --format mp4             # MP4，更广泛兼容性
 ```
 
 ### 高级功能
 
 ```bash
-# 录制中显示鼠标指针
+# 在录制中显示光标
 scap --show-cursor
 
 # 录制前倒计时
 scap --countdown 5            # 5 秒倒计时
 scap --countdown 3 --show-cursor
 
-# 多参数组合
+# 组合多个选项
 scap --screen 2 --area 0:0:1920:1080 --enable-microphone \
                --fps 30 --quality high --countdown 5 --show-cursor \
                --output ~/Desktop/presentation.mp4
@@ -256,12 +193,12 @@ scap --screen 2 --area 0:0:1920:1080 --enable-microphone \
 ### 预设管理
 
 ```bash
-# 保存当前配置为预设
+# 将当前设置保存为预设
 scap --save-preset "meeting"
 scap --duration 30000 --enable-microphone --quality high \
                --save-preset "presentation"
 
-# 使用已保存预设
+# 使用保存的预设
 scap --preset "meeting"
 scap --preset "presentation" --output ~/Desktop/demo.mov
 
@@ -272,7 +209,7 @@ scap --list-presets
 scap --delete-preset "old-config"
 ```
 
-## 示例
+## 使用示例
 
 ### 快速录制场景
 
@@ -280,31 +217,34 @@ scap --delete-preset "old-config"
 # 快速 10 秒屏幕录制
 scap
 
-# 30 秒演示录制并倒计时
+# 30 秒演示录制，带倒计时
 scap --duration 30000 --countdown 3 --show-cursor
 
-# 高质量应用演示
+# 高质量应用程序演示
 scap --app Safari --duration 60000 --quality high --fps 60 \
                --output ~/Desktop/safari-demo.mp4
 ```
 
-### 多屏场景
+### 多屏幕设置
 
 ```bash
 # 列出可用显示器
 scap --screen-list
 
-# 录制次显示器全高清
+# 录制副显示器的全高清内容
 scap --screen 2 --area 0:0:1920:1080 --quality high
 
-# 主显示器自定义区域
+# 录制主显示器的自定义区域
 scap --screen 1 --area 0:0:2560:1440 --format mp4
+
+# 居中录制适用于不同屏幕尺寸
+scap --screen 2 --area center:1920:1080  # 在任何屏幕尺寸上自动居中
 ```
 
 ### 音频录制
 
 ```bash
-# 教学录制并启用麦克风
+# 录制教程时包含麦克风
 scap --enable-microphone --duration 300000 --quality high \
                --show-cursor --countdown 5
 
@@ -325,172 +265,264 @@ scap --app Safari --duration 60000 --quality medium \
 scap --screen 2 --quality low --fps 15 \
                --save-preset "secondary-screen"
 
+# 带居中区域和倒计时的高级预设
+scap --area center:1280:720 --countdown 5 --quality high \
+               --enable-microphone --save-preset "presentation"
+
 # 使用预设
 scap --preset "tutorial" --output ~/Desktop/lesson1.mov
 scap --preset "browser-demo"
 scap --preset "secondary-screen" --duration 120000
+
+# 覆盖预设设置
+scap --preset "tutorial" --duration 60000 --output custom.mov
 ```
 
 ## 命令参考
 
-### 信息类命令
+### 信息命令
 
-| 命令                  | 说明               |
-| --------------------- | ------------------ |
-| `--help`, `-h`        | 显示详细帮助和示例 |
-| `--version`           | 显示版本信息       |
-| `--screen-list`, `-l` | 列出可用屏幕及详情 |
-| `--app-list`, `-L`    | 列出正在运行的应用 |
-| `--list-presets`      | 显示所有已保存预设 |
+| 命令                  | 描述                     |
+| --------------------- | ------------------------ |
+| `--help`, `-h`        | 显示全面帮助和示例       |
+| `--version`           | 显示版本信息             |
+| `--screen-list`, `-l` | 列出可用屏幕及详细信息   |
+| `--app-list`, `-L`    | 列出运行中的应用程序     |
+| `--list-presets`      | 显示所有保存的预设       |
 
 ### 录制选项
 
-| 选项         | 短参数 | 说明                         | 默认值         |
-| ------------ | ------ | ---------------------------- | -------------- |
-| `--duration` | `-d`   | 录制时长（毫秒）             | 10000（10 秒） |
-| `--output`   | `-o`   | 输出文件路径                 | 时间戳文件     |
-| `--screen`   | `-s`   | 录制屏幕索引                 | 1（主屏幕）    |
-| `--area`     | `-a`   | 录制区域（x:y:width:height） | 全屏           |
-| `--app`      | `-A`   | 录制应用名称                 | 无             |
+| 选项         | 短标志 | 描述                                                 | 默认值           |
+| ------------ | ------ | ---------------------------------------------------- | ---------------- |
+| `--duration` | `-d`   | 录制持续时间（毫秒）                                 | 10000（10秒）    |
+| `--output`   | `-o`   | 输出文件路径                                         | 带时间戳的文件   |
+| `--screen`   | `-s`   | 要录制的屏幕索引                                     | 1（主屏幕）      |
+| `--area`     | `-a`   | 录制区域（x:y:width:height 或 center:width:height） | 全屏             |
+| `--app`      | `-A`   | 要录制的应用程序名称                                 | 无               |
+| `--force`    | `-f`   | 强制覆盖现有文件                                     | 关闭             |
 
-### 画质选项
+### 质量选项
 
-| 选项              | 说明         | 可选值            | 默认值 |
+| 选项              | 描述         | 值                | 默认值 |
 | ----------------- | ------------ | ----------------- | ------ |
 | `--fps`           | 帧率         | 15, 30, 60        | 30     |
 | `--quality`       | 视频质量预设 | low, medium, high | medium |
 | `--format`        | 输出格式     | mov, mp4          | mov    |
 | `--audio-quality` | 音频质量预设 | low, medium, high | medium |
 
-### 音频与视觉
+### 音频和视觉
 
-| 选项                  | 短参数 | 说明               | 默认值 |
-| --------------------- | ------ | ------------------ | ------ |
-| `--enable-microphone` | `-m`   | 包含麦克风音频     | 关闭   |
-| `--show-cursor`       |        | 录制中显示鼠标     | 关闭   |
-| `--countdown`         |        | 录制前倒计时（秒） | 0      |
+| 选项                  | 短标志 | 描述                 | 默认值 |
+| --------------------- | ------ | -------------------- | ------ |
+| `--enable-microphone` | `-m`   | 包含麦克风音频       | 关闭   |
+| `--show-cursor`       |        | 在录制中显示光标     | 关闭   |
+| `--countdown`         |        | 开始前倒计时秒数     | 0      |
 
 ### 预设管理
 
-| 选项                     | 说明               |
-| ------------------------ | ------------------ |
-| `--save-preset <name>`   | 保存当前配置为预设 |
-| `--preset <name>`        | 加载预设配置       |
-| `--delete-preset <name>` | 删除预设           |
+| 选项                     | 描述                   |
+| ------------------------ | ---------------------- |
+| `--save-preset <name>`   | 将当前设置保存为预设   |
+| `--preset <name>`        | 从预设加载设置         |
+| `--delete-preset <name>` | 删除保存的预设         |
 
 ## 权限设置
 
 ### 屏幕录制权限
 
 1. 打开 **系统偏好设置** > **安全性与隐私** > **隐私**
-2. 左侧选择 **屏幕录制**
+2. 从左侧边栏选择 **屏幕录制**
 3. 点击锁图标并输入密码
-4. 添加你的终端应用（Terminal、iTerm2 等）
-5. 勾选终端应用旁的复选框
-6. 重启终端应用
+4. 添加您的终端应用程序（Terminal、iTerm2 等）
+5. 启用终端旁边的复选框
+6. 重启终端应用程序
 
 ### 麦克风权限（可选）
 
 仅在使用 `--enable-microphone` 时需要：
 
 1. 打开 **系统偏好设置** > **安全性与隐私** > **隐私**
-2. 左侧选择 **麦克风**
-3. 添加并勾选你的终端应用
-4. 重启终端应用
+2. 从左侧边栏选择 **麦克风**
+3. 添加并启用您的终端应用程序
+4. 重启终端应用程序
 
-## 故障排查
+## 故障排除
 
 ### 常见问题
 
 #### 权限错误
 
-**“屏幕录制权限被拒绝”**
+**"屏幕录制权限被拒绝"**
 
-- 按照权限设置部分为终端授予屏幕录制权限
-- 授权后重启终端
-- 确认在系统偏好设置中选择了正确的终端应用
+- 向您的终端授予屏幕录制权限（参见权限设置）
+- 授予权限后重启终端
+- 确保在系统偏好设置中使用正确的终端应用程序
 
-**“麦克风权限被拒绝”**
+**"麦克风权限被拒绝"**
 
-- 按照权限设置部分为终端授予麦克风权限
+- 向您的终端授予麦克风权限（参见权限设置）
 - 仅在使用 `--enable-microphone` 时出现
-- 若麦克风权限失败，仅录制系统音频
+- 如果麦克风失败，录制将仅使用系统音频继续
 
 #### 屏幕/显示器问题
 
-**“未找到屏幕 X”**
+**"未找到屏幕 X"**
 
 - 使用 `--screen-list` 查看可用屏幕
-- 屏幕索引从 1 开始
-- 外接显示器断开后索引可能变化
+- 屏幕索引从 1 开始，不是 0
+- 外部显示器断开连接时索引可能会改变
 
-**“区域坐标无效”**
+**"无效的区域坐标"**
 
-- 使用 `--screen-list` 查看屏幕分辨率
-- 坐标需在屏幕范围内
-- 格式：`x:y:width:height`（均为正整数）
+- 使用 `--screen-list` 检查屏幕分辨率
+- 确保坐标在屏幕边界内
+- 格式：`x:y:width:height`（所有正整数）
 
-#### 应用录制问题
+#### 应用程序录制问题
 
-**“未找到应用 'X'”**
+**"未找到应用程序 'X'"**
 
-- 使用 `--app-list` 查看应用名称
+- 使用 `--app-list` 查看确切的应用程序名称
 - 名称区分大小写
-- 应用需运行且有可见窗口
-- 带空格名称需加引号，如：`"Final Cut Pro"`
+- 应用程序必须正在运行且有可见窗口
+- 带空格的名称使用引号：`"Final Cut Pro"`
+
+**录制中应用程序窗口不可见**
+
+- SwiftCapture 自动将应用程序置于前台
+- 命令启动后等待 1-2 秒进行窗口切换
+- 确保应用程序未最小化或隐藏
+- 检查应用程序是否在不同的桌面空间
+
+**录制显示错误窗口**
+
+- SwiftCapture 选择最大的有标题窗口
+- 录制前关闭不必要的窗口
+- 使用窗口标题识别正确的应用程序实例
 
 #### 文件输出问题
 
-**保存时“权限被拒绝”**
+**保存时"权限被拒绝"**
 
-- 检查输出目录写入权限
+- 检查输出目录的写入权限
 - 尝试保存到 `~/Desktop` 或 `~/Documents`
-- 确保父目录已存在
+- 确保父目录存在
 
-**文件扩展名不匹配**
+**"文件扩展名不匹配"**
 
-- 确认文件扩展名与 `--format` 参数一致
-- `.mov` 对应 `--format mov`，`.mp4` 对应 `--format mp4`
+- 确保文件扩展名与 `--format` 选项匹配
+- `--format mov` 使用 `.mov`，`--format mp4` 使用 `.mp4`
 
-### 性能建议
+**文件冲突和覆盖**
 
-**提升性能：**
+- 不使用 `--force`：交互式提示或自动编号
+- 使用 `--force`：自动覆盖现有文件
+- 自动编号文件：`recording-2.mov`、`recording-3.mov`
 
-- 长时间录制建议用 `--quality low`
-- 静态内容用 `--fps 15`
-- 标准录制用 `--fps 30`
-- 流畅运动用 `--fps 60`
-- 用 `--area` 录制部分区域可减小负载
-- 录制前关闭不必要的应用
+**"磁盘空间不足"警告**
 
-**减小文件体积：**
+- SwiftCapture 在录制前检查可用空间
+- 高质量录制长时间可能超过 1GB
+- 在空间受限情况下使用 `--quality low`
 
-- 用 `--quality low` 或 `--quality medium`
-- 降低帧率用 `--fps 15` 或 `--fps 30`
-- 用 `--format mp4` 获得更好压缩
-- 录制部分区域而非全屏
+### 性能提示
 
-**最佳画质：**
+**提高性能：**
 
-- 用 `--quality high` 配合 `--fps 60`
-- 用 `--format mov` 获得最佳 macOS 兼容性
-- 确保磁盘空间充足（长录制建议 1GB+）
+- 长时间录制使用 `--quality low`
+- 静态内容（演示、代码）使用 `--fps 15`
+- 标准录制使用 `--fps 30`
+- 仅在流畅运动捕获时使用 `--fps 60`
+- 使用 `--area` 录制较小区域而非全屏
+- 录制前关闭不必要的应用程序
+
+**减小文件大小：**
+
+- 使用 `--quality low` 或 `--quality medium`
+- 使用 `--fps 15` 或 `--fps 30` 降低帧率
+- 使用 `--format mp4` 获得更好的压缩
+- 录制特定区域而非全屏
+
+**最佳质量：**
+
+- 使用 `--quality high` 配合 `--fps 60`
+- 使用 `--format mov` 获得最佳 macOS 兼容性
+- 确保足够的磁盘空间（长录制需要 1GB+）
+
+**自动优化：**
+
+- SwiftCapture 根据分辨率自动调整比特率
+- 高分辨率 MOV 文件使用 HEVC 编解码器（更好的压缩）
+- MP4 文件使用 H.264 编解码器（最大兼容性）
+- 基于内容类型和分辨率的质量建议
 
 ### 系统要求问题
 
-**“系统要求不满足”**
+**"不满足系统要求"**
 
-- 需 macOS 12.3 及以上
-- 通过系统偏好设置 > 软件更新升级 macOS
-- 旧版 macOS 无法使用 ScreenCaptureKit
+- 需要 macOS 12.3 或更高版本
+- 通过系统偏好设置 > 软件更新来更新 macOS
+- 较旧的 macOS 版本不支持 ScreenCaptureKit
+
+## 技术细节
+
+### 高级区域选择
+
+SwiftCapture 提供像素级精确的区域录制和智能缩放：
+
+- **Retina 显示器支持**：自动处理高 DPI 显示器的适当缩放
+- **坐标系统**：支持逻辑和像素坐标
+- **边界验证**：针对目标屏幕尺寸的实时验证
+- **智能居中**：`center:width:height` 格式用于响应式定位
+
+```bash
+# 高级区域选择示例
+scap --area 0:0:3840:2160     # Retina 显示器上的 4K 区域（自动缩放）
+scap --area center:1920:1080  # 1080p 居中，不受屏幕尺寸影响
+scap --screen 2 --area 100:100:1280:720  # 副显示器上的特定区域
+```
+
+### 智能应用程序录制
+
+应用程序录制包含高级窗口管理：
+
+- **智能窗口选择**：优先选择有标题的主窗口而非实用程序窗口
+- **跨桌面录制**：自动切换到应用程序的桌面空间
+- **窗口激活**：将目标应用程序置于前台以进行无遮挡录制
+- **多窗口处理**：当应用程序有多个窗口时选择最佳窗口
+
+```bash
+# 带自动优化的应用程序录制
+scap --app "Final Cut Pro" --duration 60000  # 自动查找并激活主窗口
+scap --app Safari --area center:1280:720     # 录制 Safari 的自定义区域（不推荐）
+```
+
+### 文件管理和冲突解决
+
+具有多种冲突解决策略的全面文件处理：
+
+- **交互模式**：文件存在时提示用户选择
+- **自动编号**：生成 `filename-2.mov`、`filename-3.mov` 序列
+- **强制覆盖**：`--force` 标志绕过所有确认
+- **目录创建**：自动创建输出目录
+- **磁盘空间验证**：录制前检查可用空间
+
+### 性能优化
+
+SwiftCapture 根据录制参数自动优化设置：
+
+- **自适应比特率**：根据分辨率和帧率计算最佳比特率
+- **编解码器选择**：根据格式和质量要求选择 H.264 或 HEVC
+- **内存管理**：长录制的高效缓冲区处理
+- **质量缩放**：为高分辨率内容推荐质量设置
 
 ## 高级用法
 
-### 脚本与自动化
+### 脚本和自动化
 
 ```bash
 #!/bin/bash
-# 自动录制脚本示例
+# 带高级功能的自动录制示例脚本
 
 # 设置变量
 DURATION=30000
@@ -500,115 +532,197 @@ TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
 # 创建输出目录
 mkdir -p "$OUTPUT_DIR"
 
-# 用预设录制
-scap --preset "meeting" \
-               --duration "$DURATION" \
-               --output "$OUTPUT_DIR/meeting_$TIMESTAMP.mov"
+# 检查可用屏幕并选择合适的
+SCREEN_COUNT=$(scap --screen-list | grep -c "Screen")
+if [ "$SCREEN_COUNT" -gt 1 ]; then
+    SCREEN=2  # 如果可用，使用副屏幕
+else
+    SCREEN=1  # 使用主屏幕
+fi
 
-echo "录制已保存到: $OUTPUT_DIR/meeting_$TIMESTAMP.mov"
+# 使用智能设置录制
+scap --screen "$SCREEN" \
+     --area center:1920:1080 \
+     --duration "$DURATION" \
+     --quality high \
+     --fps 30 \
+     --countdown 3 \
+     --force \
+     --output "$OUTPUT_DIR/meeting_$TIMESTAMP.mov"
+
+echo "录制已保存到：$OUTPUT_DIR/meeting_$TIMESTAMP.mov"
+
+# 可选：转换为 MP4 以便分享
+# ffmpeg -i "$OUTPUT_DIR/meeting_$TIMESTAMP.mov" \
+#        -c:v libx264 -c:a aac \
+#        "$OUTPUT_DIR/meeting_$TIMESTAMP.mp4"
 ```
 
 ### 批量录制
 
 ```bash
-# 依次录制多个应用
+# 智能处理的多应用程序序列录制
 apps=("Safari" "Terminal" "Finder")
 
 for app in "${apps[@]}"; do
     echo "正在录制 $app..."
-    scap --app "$app" --duration 10000 \
-                   --output "~/Desktop/${app}_demo.mov"
-    sleep 2  # 录制间隔
- done
+
+    # 在批处理模式下使用 force 标志避免交互式提示
+    scap --app "$app" \
+         --duration 10000 \
+         --quality medium \
+         --countdown 2 \
+         --force \
+         --output "~/Desktop/${app}_demo_$(date +%H%M%S).mov"
+
+    sleep 3  # 为应用程序切换和文件写入留出时间
+done
+
+# 批量录制不同屏幕区域
+areas=("0:0:1920:1080" "center:1280:720" "100:100:800:600")
+
+for i in "${!areas[@]}"; do
+    echo "正在录制区域：${areas[$i]}"
+    scap --area "${areas[$i]}" \
+         --duration 5000 \
+         --output "~/Desktop/area_${i}_$(date +%H%M%S).mov"
+done
 ```
 
 ### 与其他工具集成
 
 ```bash
-# 与 ffmpeg 联合后处理
+# 与 ffmpeg 结合进行后处理
 scap --duration 30000 --quality high --output temp_recording.mov
 ffmpeg -i temp_recording.mov -vf "scale=1280:720" final_recording.mp4
 rm temp_recording.mov
 ```
 
-## 源码编译
+## 技术规格
 
-### 依赖要求
+### 支持的格式和编解码器
 
-- macOS 12.3 及以上
-- Xcode 14.3 及以上
-- Swift 5.6 及以上
+| 格式 | 编解码器    | 最大分辨率     | 兼容性                   |
+| ---- | ----------- | -------------- | ------------------------ |
+| MOV  | H.264, HEVC | 8K (7680×4320) | macOS 原生，专业工具     |
+| MP4  | H.264       | 4K (4096×2160) | 通用兼容性               |
 
-### 编译步骤
+### 质量设置和比特率
+
+| 质量   | 基础比特率 | 典型用例                 | 文件大小（10分钟 1080p） |
+| ------ | ---------- | ------------------------ | ------------------------ |
+| Low    | 2 Mbps     | 长录制，静态内容         | ~150 MB                  |
+| Medium | 5 Mbps     | 通用目的，演示           | ~375 MB                  |
+| High   | 10 Mbps    | 专业内容，运动           | ~750 MB                  |
+
+_比特率根据分辨率和帧率自动缩放_
+
+### 帧率建议
+
+| 内容类型                   | 推荐 FPS | 用例                       |
+| -------------------------- | -------- | -------------------------- |
+| 静态内容（代码、文档）     | 15 fps   | 较小文件，足够质量         |
+| 一般录制                   | 30 fps   | 平衡质量和文件大小         |
+| 流畅运动（游戏、动画）     | 60 fps   | 专业质量，较大文件         |
+
+### 音频规格
+
+| 质量   | 采样率    | 比特率   | 声道   |
+| ------ | --------- | -------- | ------ |
+| Low    | 22.05 kHz | 64 kbps  | 立体声 |
+| Medium | 44.1 kHz  | 128 kbps | 立体声 |
+| High   | 48 kHz    | 192 kbps | 立体声 |
+
+### 系统性能
+
+- **内存使用**：录制期间约 50-100 MB
+- **CPU 使用**：现代 Mac 上 5-15%（因分辨率/fps 而异）
+- **磁盘 I/O**：实时写入，根据质量约 10-50 MB/s
+- **支持分辨率**：在兼容硬件上最高 8K
+
+## 从源码构建
+
+### 先决条件
+
+- macOS 12.3 或更高版本
+- Xcode 14.3 或更高版本
+- Swift 5.6 或更高版本
+
+### 构建步骤
 
 ```bash
 # 克隆仓库
 git clone <repository-url>
-cd SwiftCapture
+cd ScreenRecorder
 
-# 清理旧构建
+# 清理之前的构建
 swift package clean
 
-# 编译调试版（开发用）
+# 构建调试版本（用于开发）
 swift build
 
-# 编译发布版（优化）
+# 构建发布版本（优化）
 swift build -c release
 
 # 运行测试
 swift test
 
 # 全局安装（可选）
-cp .build/release/SwiftCapture /usr/local/bin/scap
+cp .build/release/ScreenRecorder /usr/local/bin/scap
 ```
 
-### 开发调试
+### 开发
 
 ```bash
-# 用 Swift 直接运行
-swift run SwiftCapture --help
+# 直接使用 Swift 运行
+swift run ScreenRecorder --help
 
-# 运行带参数
-swift run SwiftCapture --duration 5000 --output test.mov
+# 带参数运行
+swift run ScreenRecorder --duration 5000 --output test.mov
 
-# 编译并运行发布版
+# 构建并运行发布版本
 swift build -c release
-.build/release/SwiftCapture --screen-list
+.build/release/ScreenRecorder --screen-list
 ```
 
-## 贡献方式
+## 贡献
 
 1. Fork 仓库
 2. 创建功能分支
-3. 完成功能开发
+3. 进行更改
 4. 为新功能添加测试
 5. 确保所有测试通过：`swift test`
-6. 提交 Pull Request
+6. 提交拉取请求
 
 ## 许可证
 
-[待补充 License 信息]
+[许可证信息待添加]
 
 ## 更新日志
 
-### 2.0.0 版本
+### 版本 2.0.0
 
-- 使用 Swift ArgumentParser 重写
-- 新增多屏支持
-- 新增应用窗口录制
-- 新增预设管理系统
-- 新增全面命令行界面
-- 新增音频质量控制
-- 新增倒计时功能
-- 新增鼠标指针显示控制
-- 新增多种输出格式（MOV, MP4）
-- 新增详细帮助与故障排查
+- 使用 Swift ArgumentParser 完全重写
+- 添加多屏幕支持和自动 Retina 缩放
+- 添加智能应用程序窗口录制和自动激活
+- 添加带 JSON 存储的预设管理系统
+- 添加带验证的全面 CLI 界面
+- 添加音频质量控制和麦克风支持
+- 添加带取消支持的倒计时功能
+- 添加光标可见性控制
+- 添加多种输出格式（MOV、MP4）和编解码器优化
+- 添加文件冲突解决（交互式/自动编号/强制）
+- 添加居中区域录制（`center:width:height`）
+- 添加基于分辨率/fps 的自动比特率计算
+- 添加磁盘空间验证和性能警告
+- 添加跨桌面空间录制支持
+- 添加全面的帮助和故障排除
 
-### 1.0.0 版本
+### 版本 1.0.0
 
-- 基础屏幕录制功能
-- 集成 ScreenCaptureKit
-- 基础命令行界面
+- 基本屏幕录制的初始版本
+- ScreenCaptureKit 集成
+- 基本命令行界面
 
 ---
 

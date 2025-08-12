@@ -1,5 +1,7 @@
 # SwiftCapture
 
+[English](README.md) | [中文](README_zh.md)
+
 A professional screen recording tool for macOS built with ScreenCaptureKit, featuring comprehensive CLI interface, multi-screen support, application window recording, and advanced audio/video controls.
 
 ## Features
@@ -88,6 +90,11 @@ scap -o ./videos/demo.mp4
 
 # Default: Current directory with timestamp (YYYY-MM-DD_HH-MM-SS.mov)
 scap  # Creates: 2024-01-15_14-30-25.mov
+
+# File conflict handling
+scap --output existing.mov    # Interactive prompt: overwrite, auto-number, or cancel
+scap --output existing.mov --force  # Force overwrite without prompt
+# Auto-numbering: existing-2.mov, existing-3.mov, etc.
 ```
 
 ### Screen and Display Selection
@@ -111,6 +118,10 @@ scap --area 0:0:1920:1080     # Full HD area
 scap --area 100:100:800:600   # 800x600 at position 100,100
 scap -a 0:0:1280:720          # 720p area (short flag)
 
+# Centered area recording (center:width:height)
+scap --area center:1280:720   # 720p centered on screen
+scap --area center:800:600    # 800x600 centered area
+
 # Combine with screen selection
 scap --screen 2 --area 0:0:1920:1080
 ```
@@ -126,6 +137,12 @@ scap -L
 scap --app Safari
 scap --app "Final Cut Pro"    # Quote names with spaces
 scap -A Terminal               # Short flag
+
+# Smart application recording features:
+# - Automatically selects main window (largest with title)
+# - Brings application to front before recording
+# - Works across multiple desktop spaces
+# - Handles window switching and activation
 ```
 
 ### Audio Recording
@@ -219,6 +236,9 @@ scap --screen 2 --area 0:0:1920:1080 --quality high
 
 # Record primary display with custom area
 scap --screen 1 --area 0:0:2560:1440 --format mp4
+
+# Centered recording works across different screen sizes
+scap --screen 2 --area center:1920:1080  # Auto-centers on any screen size
 ```
 
 ### Audio Recording
@@ -245,58 +265,66 @@ scap --app Safari --duration 60000 --quality medium \
 scap --screen 2 --quality low --fps 15 \
                --save-preset "secondary-screen"
 
+# Advanced preset with centered area and countdown
+scap --area center:1280:720 --countdown 5 --quality high \
+               --enable-microphone --save-preset "presentation"
+
 # Use presets
 scap --preset "tutorial" --output ~/Desktop/lesson1.mov
 scap --preset "browser-demo"
 scap --preset "secondary-screen" --duration 120000
+
+# Override preset settings
+scap --preset "tutorial" --duration 60000 --output custom.mov
 ```
 
 ## Command Reference
 
 ### Information Commands
 
-| Command | Description |
-|---------|-------------|
-| `--help`, `-h` | Show comprehensive help and examples |
-| `--version` | Display version information |
-| `--screen-list`, `-l` | List available screens with details |
-| `--app-list`, `-L` | List running applications |
-| `--list-presets` | Show all saved presets |
+| Command               | Description                          |
+| --------------------- | ------------------------------------ |
+| `--help`, `-h`        | Show comprehensive help and examples |
+| `--version`           | Display version information          |
+| `--screen-list`, `-l` | List available screens with details  |
+| `--app-list`, `-L`    | List running applications            |
+| `--list-presets`      | Show all saved presets               |
 
 ### Recording Options
 
-| Option | Short | Description | Default |
-|--------|-------|-------------|---------|
-| `--duration` | `-d` | Recording duration in milliseconds | 10000 (10s) |
-| `--output` | `-o` | Output file path | Timestamped file |
-| `--screen` | `-s` | Screen index to record | 1 (primary) |
-| `--area` | `-a` | Recording area (x:y:width:height) | Full screen |
-| `--app` | `-A` | Application name to record | None |
+| Option       | Short | Description                                              | Default          |
+| ------------ | ----- | -------------------------------------------------------- | ---------------- |
+| `--duration` | `-d`  | Recording duration in milliseconds                       | 10000 (10s)      |
+| `--output`   | `-o`  | Output file path                                         | Timestamped file |
+| `--screen`   | `-s`  | Screen index to record                                   | 1 (primary)      |
+| `--area`     | `-a`  | Recording area (x:y:width:height or center:width:height) | Full screen      |
+| `--app`      | `-A`  | Application name to record                               | None             |
+| `--force`    | `-f`  | Force overwrite existing files                           | Off              |
 
 ### Quality Options
 
-| Option | Description | Values | Default |
-|--------|-------------|--------|---------|
-| `--fps` | Frame rate | 15, 30, 60 | 30 |
-| `--quality` | Video quality preset | low, medium, high | medium |
-| `--format` | Output format | mov, mp4 | mov |
-| `--audio-quality` | Audio quality preset | low, medium, high | medium |
+| Option            | Description          | Values            | Default |
+| ----------------- | -------------------- | ----------------- | ------- |
+| `--fps`           | Frame rate           | 15, 30, 60        | 30      |
+| `--quality`       | Video quality preset | low, medium, high | medium  |
+| `--format`        | Output format        | mov, mp4          | mov     |
+| `--audio-quality` | Audio quality preset | low, medium, high | medium  |
 
 ### Audio and Visual
 
-| Option | Short | Description | Default |
-|--------|-------|-------------|---------|
-| `--enable-microphone` | `-m` | Include microphone audio | Off |
-| `--show-cursor` | | Show cursor in recording | Off |
-| `--countdown` | | Countdown seconds before start | 0 |
+| Option                | Short | Description                    | Default |
+| --------------------- | ----- | ------------------------------ | ------- |
+| `--enable-microphone` | `-m`  | Include microphone audio       | Off     |
+| `--show-cursor`       |       | Show cursor in recording       | Off     |
+| `--countdown`         |       | Countdown seconds before start | 0       |
 
 ### Preset Management
 
-| Option | Description |
-|--------|-------------|
-| `--save-preset <name>` | Save current settings as preset |
-| `--preset <name>` | Load settings from preset |
-| `--delete-preset <name>` | Delete saved preset |
+| Option                   | Description                     |
+| ------------------------ | ------------------------------- |
+| `--save-preset <name>`   | Save current settings as preset |
+| `--preset <name>`        | Load settings from preset       |
+| `--delete-preset <name>` | Delete saved preset             |
 
 ## Permissions Setup
 
@@ -325,11 +353,13 @@ Only required when using `--enable-microphone`:
 #### Permission Errors
 
 **"Screen Recording permission denied"**
+
 - Grant Screen Recording permission to your terminal (see Permissions Setup)
 - Restart terminal after granting permission
 - Ensure you're using the correct terminal app in System Preferences
 
 **"Microphone permission denied"**
+
 - Grant Microphone permission to your terminal (see Permissions Setup)
 - Only occurs when using `--enable-microphone`
 - Recording continues with system audio only if microphone fails
@@ -337,11 +367,13 @@ Only required when using `--enable-microphone`:
 #### Screen/Display Issues
 
 **"Screen X not found"**
+
 - Use `--screen-list` to see available screens
 - Screen indices start at 1, not 0
 - External displays may change indices when disconnected
 
 **"Invalid area coordinates"**
+
 - Check screen resolution with `--screen-list`
 - Ensure coordinates are within screen bounds
 - Format: `x:y:width:height` (all positive integers)
@@ -349,25 +381,54 @@ Only required when using `--enable-microphone`:
 #### Application Recording Issues
 
 **"Application 'X' not found"**
+
 - Use `--app-list` to see exact application names
 - Names are case-sensitive
 - Application must be running with visible windows
 - Use quotes for names with spaces: `"Final Cut Pro"`
 
+**Application window not visible in recording**
+
+- SwiftCapture automatically brings applications to front
+- Wait 1-2 seconds after command starts for window switching
+- Ensure application isn't minimized or hidden
+- Check if application is on a different desktop space
+
+**Recording shows wrong window**
+
+- SwiftCapture selects the largest window with a title
+- Close unnecessary windows before recording
+- Use window titles to identify the correct application instance
+
 #### File Output Issues
 
 **"Permission denied" when saving**
+
 - Check write permissions for output directory
 - Try saving to `~/Desktop` or `~/Documents`
 - Ensure parent directories exist
 
 **"File extension mismatch"**
+
 - Ensure file extension matches `--format` option
 - `.mov` for `--format mov`, `.mp4` for `--format mp4`
+
+**File conflicts and overwriting**
+
+- Without `--force`: Interactive prompt or auto-numbering
+- With `--force`: Automatically overwrites existing files
+- Auto-numbered files: `recording-2.mov`, `recording-3.mov`
+
+**"Insufficient disk space" warnings**
+
+- SwiftCapture checks available space before recording
+- High-quality recordings can be 1GB+ for longer sessions
+- Use `--quality low` for space-constrained situations
 
 ### Performance Tips
 
 **For Better Performance:**
+
 - Use `--quality low` for longer recordings
 - Use `--fps 15` for static content (presentations, code)
 - Use `--fps 30` for standard recordings
@@ -376,22 +437,84 @@ Only required when using `--enable-microphone`:
 - Close unnecessary applications before recording
 
 **For Smaller File Sizes:**
+
 - Use `--quality low` or `--quality medium`
 - Lower frame rate with `--fps 15` or `--fps 30`
 - Use `--format mp4` for better compression
 - Record specific areas instead of full screen
 
 **For Best Quality:**
+
 - Use `--quality high` with `--fps 60`
 - Use `--format mov` for best macOS compatibility
 - Ensure sufficient disk space (1GB+ for longer recordings)
 
+**Automatic Optimizations:**
+
+- SwiftCapture automatically adjusts bitrates based on resolution
+- HEVC codec used for high-resolution MOV files (better compression)
+- H.264 codec used for MP4 files (maximum compatibility)
+- Quality recommendations based on content type and resolution
+
 ### System Requirements Issues
 
 **"System requirements not met"**
+
 - Requires macOS 12.3 or later
 - Update macOS through System Preferences > Software Update
 - ScreenCaptureKit is not available on older macOS versions
+
+## Technical Details
+
+### Advanced Area Selection
+
+SwiftCapture provides pixel-perfect area recording with intelligent scaling:
+
+- **Retina Display Support**: Automatically handles high-DPI displays with proper scaling
+- **Coordinate Systems**: Supports both logical and pixel coordinates
+- **Bounds Validation**: Real-time validation against target screen dimensions
+- **Smart Centering**: `center:width:height` format for responsive positioning
+
+```bash
+# Examples of advanced area selection
+scap --area 0:0:3840:2160     # 4K area on Retina display (auto-scaled)
+scap --area center:1920:1080  # 1080p centered regardless of screen size
+scap --screen 2 --area 100:100:1280:720  # Specific area on secondary display
+```
+
+### Smart Application Recording
+
+Application recording includes advanced window management:
+
+- **Intelligent Window Selection**: Prioritizes main windows with titles over utility windows
+- **Cross-Desktop Recording**: Automatically switches to application's desktop space
+- **Window Activation**: Brings target application to front for unobstructed recording
+- **Multi-Window Handling**: Selects optimal window when applications have multiple windows
+
+```bash
+# Application recording with automatic optimization
+scap --app "Final Cut Pro" --duration 60000  # Automatically finds and activates main window
+scap --app Safari --area center:1280:720     # Records Safari with custom area (not recommended)
+```
+
+### File Management & Conflict Resolution
+
+Comprehensive file handling with multiple conflict resolution strategies:
+
+- **Interactive Mode**: Prompts for user choice when files exist
+- **Auto-Numbering**: Generates `filename-2.mov`, `filename-3.mov` sequences
+- **Force Overwrite**: `--force` flag bypasses all confirmations
+- **Directory Creation**: Automatically creates output directories
+- **Disk Space Validation**: Checks available space before recording
+
+### Performance Optimization
+
+SwiftCapture automatically optimizes settings based on recording parameters:
+
+- **Adaptive Bitrates**: Calculates optimal bitrate based on resolution and frame rate
+- **Codec Selection**: Chooses H.264 or HEVC based on format and quality requirements
+- **Memory Management**: Efficient buffer handling for long recordings
+- **Quality Scaling**: Recommends quality settings for high-resolution content
 
 ## Advanced Usage
 
@@ -399,7 +522,7 @@ Only required when using `--enable-microphone`:
 
 ```bash
 #!/bin/bash
-# Example script for automated recording
+# Example script for automated recording with advanced features
 
 # Set up variables
 DURATION=30000
@@ -409,25 +532,60 @@ TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
 # Create output directory
 mkdir -p "$OUTPUT_DIR"
 
-# Record with preset
-scap --preset "meeting" \
-               --duration "$DURATION" \
-               --output "$OUTPUT_DIR/meeting_$TIMESTAMP.mov"
+# Check available screens and select appropriate one
+SCREEN_COUNT=$(scap --screen-list | grep -c "Screen")
+if [ "$SCREEN_COUNT" -gt 1 ]; then
+    SCREEN=2  # Use secondary screen if available
+else
+    SCREEN=1  # Use primary screen
+fi
+
+# Record with intelligent settings
+scap --screen "$SCREEN" \
+     --area center:1920:1080 \
+     --duration "$DURATION" \
+     --quality high \
+     --fps 30 \
+     --countdown 3 \
+     --force \
+     --output "$OUTPUT_DIR/meeting_$TIMESTAMP.mov"
 
 echo "Recording saved to: $OUTPUT_DIR/meeting_$TIMESTAMP.mov"
+
+# Optional: Convert to MP4 for sharing
+# ffmpeg -i "$OUTPUT_DIR/meeting_$TIMESTAMP.mov" \
+#        -c:v libx264 -c:a aac \
+#        "$OUTPUT_DIR/meeting_$TIMESTAMP.mp4"
 ```
 
 ### Batch Recording
 
 ```bash
-# Record multiple applications in sequence
+# Record multiple applications in sequence with smart handling
 apps=("Safari" "Terminal" "Finder")
 
 for app in "${apps[@]}"; do
     echo "Recording $app..."
-    scap --app "$app" --duration 10000 \
-                   --output "~/Desktop/${app}_demo.mov"
-    sleep 2  # Brief pause between recordings
+
+    # Use force flag to avoid interactive prompts in batch mode
+    scap --app "$app" \
+         --duration 10000 \
+         --quality medium \
+         --countdown 2 \
+         --force \
+         --output "~/Desktop/${app}_demo_$(date +%H%M%S).mov"
+
+    sleep 3  # Allow time for app switching and file writing
+done
+
+# Batch record different screen areas
+areas=("0:0:1920:1080" "center:1280:720" "100:100:800:600")
+
+for i in "${!areas[@]}"; do
+    echo "Recording area: ${areas[$i]}"
+    scap --area "${areas[$i]}" \
+         --duration 5000 \
+         --output "~/Desktop/area_${i}_$(date +%H%M%S).mov"
 done
 ```
 
@@ -439,6 +597,48 @@ scap --duration 30000 --quality high --output temp_recording.mov
 ffmpeg -i temp_recording.mov -vf "scale=1280:720" final_recording.mp4
 rm temp_recording.mov
 ```
+
+## Technical Specifications
+
+### Supported Formats and Codecs
+
+| Format | Codecs      | Max Resolution | Compatibility                    |
+| ------ | ----------- | -------------- | -------------------------------- |
+| MOV    | H.264, HEVC | 8K (7680×4320) | macOS native, professional tools |
+| MP4    | H.264       | 4K (4096×2160) | Universal compatibility          |
+
+### Quality Settings and Bitrates
+
+| Quality | Base Bitrate | Typical Use Case                | File Size (10min 1080p) |
+| ------- | ------------ | ------------------------------- | ----------------------- |
+| Low     | 2 Mbps       | Long recordings, static content | ~150 MB                 |
+| Medium  | 5 Mbps       | General purpose, presentations  | ~375 MB                 |
+| High    | 10 Mbps      | Professional content, motion    | ~750 MB                 |
+
+_Bitrates automatically scale based on resolution and frame rate_
+
+### Frame Rate Recommendations
+
+| Content Type                      | Recommended FPS | Use Case                           |
+| --------------------------------- | --------------- | ---------------------------------- |
+| Static content (code, documents)  | 15 fps          | Smaller files, adequate quality    |
+| General recording                 | 30 fps          | Balanced quality and file size     |
+| Smooth motion (games, animations) | 60 fps          | Professional quality, larger files |
+
+### Audio Specifications
+
+| Quality | Sample Rate | Bitrate  | Channels |
+| ------- | ----------- | -------- | -------- |
+| Low     | 22.05 kHz   | 64 kbps  | Stereo   |
+| Medium  | 44.1 kHz    | 128 kbps | Stereo   |
+| High    | 48 kHz      | 192 kbps | Stereo   |
+
+### System Performance
+
+- **Memory Usage**: ~50-100 MB during recording
+- **CPU Usage**: 5-15% on modern Macs (varies with resolution/fps)
+- **Disk I/O**: Real-time writing, ~10-50 MB/s depending on quality
+- **Supported Resolutions**: Up to 8K on compatible hardware
 
 ## Building from Source
 
@@ -501,18 +701,25 @@ swift build -c release
 ## Changelog
 
 ### Version 2.0.0
+
 - Complete rewrite with Swift ArgumentParser
-- Added multi-screen support
-- Added application window recording
-- Added preset management system
-- Added comprehensive CLI interface
-- Added audio quality controls
-- Added countdown functionality
+- Added multi-screen support with automatic Retina scaling
+- Added intelligent application window recording with auto-activation
+- Added preset management system with JSON storage
+- Added comprehensive CLI interface with validation
+- Added audio quality controls and microphone support
+- Added countdown functionality with cancellation support
 - Added cursor visibility control
-- Added multiple output formats (MOV, MP4)
+- Added multiple output formats (MOV, MP4) with codec optimization
+- Added file conflict resolution (interactive/auto-numbering/force)
+- Added centered area recording (`center:width:height`)
+- Added automatic bitrate calculation based on resolution/fps
+- Added disk space validation and performance warnings
+- Added cross-desktop space recording support
 - Added comprehensive help and troubleshooting
 
 ### Version 1.0.0
+
 - Initial release with basic screen recording
 - ScreenCaptureKit integration
 - Basic command-line interface
