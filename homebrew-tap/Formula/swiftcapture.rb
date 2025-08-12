@@ -15,7 +15,7 @@ class Swiftcapture < Formula
 
   def install
     # Build the release version
-    system "swift", "build", "--disable-sandbox", "-c", "release", "--arch", "arm64", "--arch", "x86_64"
+    system "swift", "build", "--disable-sandbox", "-c", "release"
     
     # Install the binary
     bin.install ".build/release/SwiftCapture" => "scap"
