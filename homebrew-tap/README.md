@@ -1,43 +1,43 @@
-# Homebrew Tap for ScreenRecorder
+# Homebrew Tap for SwiftCapture
 
-This is the official Homebrew tap for ScreenRecorder, a professional screen recording tool for macOS.
+This is the official Homebrew tap for SwiftCapture, a professional screen recording tool for macOS.
 
 ## Installation
 
 ```bash
 # Add the tap
-brew tap your-username/screenrecorder
+brew tap your-username/scap
 
-# Install ScreenRecorder
-brew install screenrecorder
+# Install SwiftCapture
+brew install scap
 ```
 
 ## Alternative Installation
 
 ```bash
 # Install directly from this tap
-brew install your-username/screenrecorder/screenrecorder
+brew install your-username/scap/scap
 ```
 
 ## Usage
 
-After installation, you can use ScreenRecorder from anywhere:
+After installation, you can use SwiftCapture from anywhere:
 
 ```bash
 # Show help
-screenrecorder --help
+scap --help
 
 # Quick 10-second recording
-screenrecorder
+scap
 
 # Record for 30 seconds with microphone
-screenrecorder --duration 30000 --enable-microphone
+scap --duration 30000 --enable-microphone
 
 # List available screens
-screenrecorder --screen-list
+scap --screen-list
 
 # List running applications
-screenrecorder --app-list
+scap --app-list
 ```
 
 ## System Requirements
@@ -48,7 +48,7 @@ screenrecorder --app-list
 
 ## Permissions Setup
 
-ScreenRecorder requires Screen Recording permission to function:
+SwiftCapture requires Screen Recording permission to function:
 
 1. Open **System Preferences** > **Security & Privacy** > **Privacy**
 2. Select **Screen Recording** from the left sidebar
@@ -59,9 +59,9 @@ ScreenRecorder requires Screen Recording permission to function:
 
 ## Support
 
-- [GitHub Repository](https://github.com/your-username/ScreenRecorder)
-- [Issues](https://github.com/your-username/ScreenRecorder/issues)
-- [Documentation](https://github.com/your-username/ScreenRecorder#readme)
+- [GitHub Repository](https://github.com/your-username/SwiftCapture)
+- [Issues](https://github.com/your-username/SwiftCapture/issues)
+- [Documentation](https://github.com/your-username/SwiftCapture#readme)
 
 ## License
 

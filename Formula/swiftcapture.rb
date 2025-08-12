@@ -1,22 +1,22 @@
-class Screenrecorder < Formula
+class Swiftcapture < Formula
   desc "Professional screen recording tool for macOS with comprehensive CLI interface"
-  homepage "https://github.com/your-username/ScreenRecorder"
-  url "https://github.com/your-username/ScreenRecorder/archive/v2.0.0.tar.gz"
+  homepage "https://github.com/your-username/SwiftCapture"
+  url "https://github.com/your-username/SwiftCapture/archive/v2.0.0.tar.gz"
   sha256 "YOUR_SHA256_HASH_HERE"
   license "MIT"
-  head "https://github.com/your-username/ScreenRecorder.git", branch: "main"
+  head "https://github.com/your-username/SwiftCapture.git", branch: "main"
 
   depends_on xcode: ["14.3", :build]
   depends_on :macos => :monterey # macOS 12.0+
 
   def install
     system "swift", "build", "--disable-sandbox", "-c", "release"
-    bin.install ".build/release/ScreenRecorder" => "screenrecorder"
+    bin.install ".build/release/SwiftCapture" => "scap"
   end
 
   def caveats
     <<~EOS
-      ScreenRecorder requires Screen Recording permission to function properly.
+      SwiftCapture requires Screen Recording permission to function properly.
       
       To grant permission:
       1. Open System Preferences > Security & Privacy > Privacy
@@ -30,22 +30,22 @@ class Screenrecorder < Formula
       following the same steps in the "Microphone" section.
       
       Usage examples:
-        screenrecorder --help                    # Show comprehensive help
-        screenrecorder --duration 30000          # Record for 30 seconds
-        screenrecorder --screen-list             # List available screens
-        screenrecorder --app-list                # List running applications
-        screenrecorder --enable-microphone       # Include microphone audio
+        scap --help                    # Show comprehensive help
+        scap --duration 30000          # Record for 30 seconds
+        scap --screen-list             # List available screens
+        scap --app-list                # List running applications
+        scap --enable-microphone       # Include microphone audio
     EOS
   end
 
   test do
     # Test that the binary was installed correctly
-    assert_match "ScreenRecorder", shell_output("#{bin}/screenrecorder --version")
+    assert_match "SwiftCapture", shell_output("#{bin}/scap --version")
     
     # Test help command
-    assert_match "Professional screen recording tool", shell_output("#{bin}/screenrecorder --help")
+    assert_match "Professional screen recording tool", shell_output("#{bin}/scap --help")
     
     # Test screen list command (should not fail even without permissions)
-    system "#{bin}/screenrecorder", "--screen-list"
+    system "#{bin}/scap", "--screen-list"
   end
 end

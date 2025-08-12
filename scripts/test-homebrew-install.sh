@@ -1,14 +1,14 @@
 #!/bin/bash
 
-# ScreenRecorder Homebrew Installation Test Script
+# SwiftCapture Homebrew Installation Test Script
 # This script tests the Homebrew installation process on clean systems
 
 set -e
 
 # Configuration
-FORMULA_PATH="Formula/screenrecorder.rb"
-TAP_NAME="your-username/screenrecorder"
-BINARY_NAME="screenrecorder"
+FORMULA_PATH="Formula/scap.rb"
+TAP_NAME="your-username/scap"
+BINARY_NAME="scap"
 
 # Colors for output
 RED='\033[0;31m'
@@ -17,7 +17,7 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-echo -e "${BLUE}🧪 Testing Homebrew installation for ScreenRecorder...${NC}"
+echo -e "${BLUE}🧪 Testing Homebrew installation for SwiftCapture...${NC}"
 
 # Check if Homebrew is installed
 if ! command -v brew &> /dev/null; then
@@ -210,10 +210,10 @@ cat > homebrew-test-report.md << EOF
 
 \`\`\`bash
 # Create tap repository
-gh repo create homebrew-screenrecorder --public
+gh repo create homebrew-scap --public
 
 # Add formula to tap
-cp $FORMULA_PATH homebrew-screenrecorder/Formula/
+cp $FORMULA_PATH homebrew-scap/Formula/
 
 # Test tap installation
 brew tap $TAP_NAME

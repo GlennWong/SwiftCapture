@@ -1,13 +1,13 @@
 #!/bin/bash
 
-# ScreenRecorder Release Build Script
+# SwiftCapture Release Build Script
 # This script builds optimized release binaries for distribution
 
 set -e  # Exit on any error
 
 # Configuration
-PRODUCT_NAME="ScreenRecorder"
-BINARY_NAME="screenrecorder"
+PRODUCT_NAME="SwiftCapture"
+BINARY_NAME="scap"
 BUILD_DIR=".build"
 RELEASE_DIR="release"
 VERSION="2.0.0"
@@ -19,7 +19,7 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-echo -e "${BLUE}🚀 Building ScreenRecorder v${VERSION} for release...${NC}"
+echo -e "${BLUE}🚀 Building SwiftCapture v${VERSION} for release...${NC}"
 
 # Check system requirements
 echo -e "${YELLOW}📋 Checking system requirements...${NC}"
@@ -118,14 +118,14 @@ echo -e "${YELLOW}📝 Creating installation script...${NC}"
 cat > "$RELEASE_DIR/install.sh" << 'EOF'
 #!/bin/bash
 
-# ScreenRecorder Installation Script
+# SwiftCapture Installation Script
 
 set -e
 
-BINARY_NAME="screenrecorder"
+BINARY_NAME="scap"
 INSTALL_DIR="/usr/local/bin"
 
-echo "🚀 Installing ScreenRecorder..."
+echo "🚀 Installing SwiftCapture..."
 
 # Check if running as root
 if [[ $EUID -eq 0 ]]; then
@@ -173,19 +173,19 @@ chmod +x "$RELEASE_DIR/install.sh"
 cat > "$RELEASE_DIR/uninstall.sh" << 'EOF'
 #!/bin/bash
 
-# ScreenRecorder Uninstallation Script
+# SwiftCapture Uninstallation Script
 
-BINARY_NAME="screenrecorder"
+BINARY_NAME="scap"
 INSTALL_DIR="/usr/local/bin"
 BINARY_PATH="$INSTALL_DIR/$BINARY_NAME"
 
-echo "🗑️  Uninstalling ScreenRecorder..."
+echo "🗑️  Uninstalling SwiftCapture..."
 
 if [ -f "$BINARY_PATH" ]; then
     sudo rm "$BINARY_PATH"
-    echo "✅ ScreenRecorder uninstalled successfully"
+    echo "✅ SwiftCapture uninstalled successfully"
 else
-    echo "⚠️  ScreenRecorder not found at $BINARY_PATH"
+    echo "⚠️  SwiftCapture not found at $BINARY_PATH"
 fi
 EOF
 
@@ -193,13 +193,13 @@ chmod +x "$RELEASE_DIR/uninstall.sh"
 
 # Create README for release
 cat > "$RELEASE_DIR/README.txt" << EOF
-ScreenRecorder v${VERSION} - Release Package
+SwiftCapture v${VERSION} - Release Package
 ==========================================
 
-This package contains the ScreenRecorder binary and installation scripts.
+This package contains the SwiftCapture binary and installation scripts.
 
 Files:
-- screenrecorder: The main executable
+- scap: The main executable
 - install.sh: Installation script (copies to /usr/local/bin)
 - uninstall.sh: Uninstallation script
 - README.txt: This file
@@ -207,18 +207,18 @@ Files:
 Installation:
 1. Run: ./install.sh
 2. Grant Screen Recording permission in System Preferences
-3. Use: screenrecorder --help
+3. Use: scap --help
 
 Manual Installation:
-1. Copy 'screenrecorder' to a directory in your PATH
-2. Make it executable: chmod +x screenrecorder
+1. Copy 'scap' to a directory in your PATH
+2. Make it executable: chmod +x scap
 
 System Requirements:
 - macOS 12.3 or later
 - Screen Recording permission
 - Microphone permission (optional, for --enable-microphone)
 
-For more information, visit: https://github.com/your-username/ScreenRecorder
+For more information, visit: https://github.com/your-username/SwiftCapture
 EOF
 
 # Generate checksums
@@ -230,7 +230,7 @@ cd ..
 
 # Create archive
 echo -e "${YELLOW}📦 Creating release archive...${NC}"
-ARCHIVE_NAME="screenrecorder-v${VERSION}-macos.tar.gz"
+ARCHIVE_NAME="scap-v${VERSION}-macos.tar.gz"
 tar -czf "$ARCHIVE_NAME" -C "$RELEASE_DIR" .
 
 ARCHIVE_SIZE=$(du -h "$ARCHIVE_NAME" | cut -f1)

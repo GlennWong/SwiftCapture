@@ -8,11 +8,11 @@ struct HelpFormatter {
     static let usageExamples = """
     
     EXAMPLES:
-      screenrecorder --duration 30000 --fps 60                    # 30 second recording at 60fps
-      screenrecorder --output video.mov --force                   # Force overwrite existing file
-      screenrecorder -f -o video.mov --duration 5000              # Short form: force overwrite
-      screenrecorder --area 0:0:1920:1080 --screen 2             # Record specific area on second screen
-      screenrecorder --app Safari --duration 15000                # Record Safari for 15 seconds
+      scap --duration 30000 --fps 60                    # 30 second recording at 60fps
+      scap --output video.mov --force                   # Force overwrite existing file
+      scap -f -o video.mov --duration 5000              # Short form: force overwrite
+      scap --area 0:0:1920:1080 --screen 2             # Record specific area on second screen
+      scap --app Safari --duration 15000                # Record Safari for 15 seconds
     
     QUICK REFERENCE:
       • Use --screen-list to identify available displays
@@ -30,7 +30,7 @@ struct HelpFormatter {
 }
 
 /// Extension to provide custom help text
-extension ScreenRecorderCommand {
+extension SwiftCaptureCommand {
     static var helpText: String {
         return """
         \(configuration.abstract)

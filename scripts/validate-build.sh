@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# ScreenRecorder Build Validation Script
+# SwiftCapture Build Validation Script
 # This script validates the build configuration and system requirements
 
 set -e
@@ -12,7 +12,7 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-echo -e "${BLUE}🔍 Validating ScreenRecorder build configuration...${NC}"
+echo -e "${BLUE}🔍 Validating SwiftCapture build configuration...${NC}"
 
 # Check if we're in the right directory
 if [ ! -f "Package.swift" ]; then
@@ -108,7 +108,7 @@ else
 fi
 
 # Check binary
-BINARY_PATH=".build/release/ScreenRecorder"
+BINARY_PATH=".build/release/SwiftCapture"
 if [ -f "$BINARY_PATH" ]; then
     BINARY_SIZE=$(du -h "$BINARY_PATH" | cut -f1)
     echo -e "${GREEN}✅ Binary created: $BINARY_SIZE${NC}"
@@ -148,7 +148,7 @@ for file in "${REQUIRED_FILES[@]}"; do
 done
 
 # Check source structure
-if [ -d "Sources/ScreenRecorder" ]; then
+if [ -d "Sources/SwiftCapture" ]; then
     echo -e "${GREEN}✅ Source directory structure correct${NC}"
 else
     echo -e "${RED}❌ Error: Source directory structure incorrect${NC}"
@@ -171,11 +171,11 @@ else
 fi
 
 # Check Homebrew formula
-if [ -f "Formula/screenrecorder.rb" ]; then
+if [ -f "Formula/scap.rb" ]; then
     echo -e "${GREEN}✅ Homebrew formula found${NC}"
     
     # Basic Ruby syntax check
-    if ruby -c Formula/screenrecorder.rb > /dev/null 2>&1; then
+    if ruby -c Formula/scap.rb > /dev/null 2>&1; then
         echo -e "${GREEN}✅ Homebrew formula syntax is valid${NC}"
     else
         echo -e "${RED}❌ Error: Homebrew formula has syntax errors${NC}"

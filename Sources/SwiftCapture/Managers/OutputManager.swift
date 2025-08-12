@@ -369,7 +369,7 @@ class OutputManager {
                     continuation.resume(throwing: OutputError.writerCreationFailed(error))
                 } else {
                     let unknownError = NSError(
-                        domain: "com.screenrecorder.output",
+                        domain: "com.swiftcapture.output",
                         code: -1,
                         userInfo: [NSLocalizedDescriptionKey: "Unknown writing error"]
                     )

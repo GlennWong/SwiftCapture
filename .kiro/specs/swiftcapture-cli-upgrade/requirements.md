@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This document outlines the requirements for upgrading the existing ScreenRecorder CLI tool to a comprehensive, professional-grade screen recording application. The upgrade will transform the current basic tool into a feature-rich CLI application with proper argument parsing, multiple recording modes, device management, and enhanced user experience. The goal is to create a tool suitable for distribution via Homebrew with both English and Chinese documentation.
+This document outlines the requirements for upgrading the existing SwiftCapture CLI tool to a comprehensive, professional-grade screen recording application. The upgrade will transform the current basic tool into a feature-rich CLI application with proper argument parsing, multiple recording modes, device management, and enhanced user experience. The goal is to create a tool suitable for distribution via Homebrew with both English and Chinese documentation.
 
 ## Requirements
 
@@ -12,7 +12,7 @@ This document outlines the requirements for upgrading the existing ScreenRecorde
 
 #### Acceptance Criteria
 
-1. WHEN user runs `screenrecorder --help` or `screenrecorder -h` THEN system SHALL display comprehensive help documentation in English
+1. WHEN user runs `scap --help` or `scap -h` THEN system SHALL display comprehensive help documentation in English
 2. WHEN user provides invalid arguments THEN system SHALL display clear error messages and usage hints
 3. WHEN user runs command without arguments THEN system SHALL use sensible defaults and display current settings
 4. IF user provides conflicting arguments THEN system SHALL display error and suggest correct usage
@@ -137,7 +137,7 @@ This document outlines the requirements for upgrading the existing ScreenRecorde
 
 #### Acceptance Criteria
 
-1. WHEN user runs `brew install screenrecorder` THEN system SHALL install the tool and all dependencies
-2. WHEN new version is available THEN user SHALL be able to update via `brew upgrade screenrecorder`
-3. WHEN tool is installed THEN it SHALL be available globally as `screenrecorder` command
+1. WHEN user runs `brew install scap` THEN system SHALL install the tool and all dependencies
+2. WHEN new version is available THEN user SHALL be able to update via `brew upgrade scap`
+3. WHEN tool is installed THEN it SHALL be available globally as `scap` command
 4. IF system requirements are not met THEN installation SHALL display clear error messages

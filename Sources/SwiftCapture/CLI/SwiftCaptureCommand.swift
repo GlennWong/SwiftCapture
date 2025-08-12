@@ -6,9 +6,9 @@ import Dispatch
 struct CancellationError: Error {}
 
 @main
-struct ScreenRecorderCommand: AsyncParsableCommand {
+struct SwiftCaptureCommand: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
-        commandName: "screenrecorder",
+        commandName: "scap",
         abstract: "Professional screen recording tool for macOS using ScreenCaptureKit",
         discussion: HelpFormatter.usageExamples,
         version: "2.0.0",
@@ -411,39 +411,39 @@ struct ScreenRecorderCommand: AsyncParsableCommand {
     
     // MARK: - Subcommand Help Methods
     private func showScreenListHelp() {
-        print("USAGE: screenrecorder --screen-list")
+        print("USAGE: scap --screen-list")
         print("")
         print("List all available screens with their indices and resolutions.")
         print("Use the screen index with --screen option to record from specific display.")
         print("")
         print("EXAMPLES:")
-        print("  screenrecorder --screen-list                       # Show available screens")
-        print("  screenrecorder --screen 1                          # Record primary display")
-        print("  screenrecorder --screen 2                          # Record secondary display")
+        print("  scap --screen-list                       # Show available screens")
+        print("  scap --screen 1                          # Record primary display")
+        print("  scap --screen 2                          # Record secondary display")
     }
     
     private func showAppListHelp() {
-        print("USAGE: screenrecorder --app-list")
+        print("USAGE: scap --app-list")
         print("")
         print("List all running applications that can be recorded.")
         print("Use the exact application name with --app option.")
         print("")
         print("EXAMPLES:")
-        print("  screenrecorder --app-list                          # Show running applications")
-        print("  screenrecorder --app Safari                        # Record Safari windows")
-        print("  screenrecorder --app \"Final Cut Pro\"             # Record app with spaces")
+        print("  scap --app-list                          # Show running applications")
+        print("  scap --app Safari                        # Record Safari windows")
+        print("  scap --app \"Final Cut Pro\"             # Record app with spaces")
     }
     
     private func showListPresetsHelp() {
-        print("USAGE: screenrecorder --list-presets")
+        print("USAGE: scap --list-presets")
         print("")
         print("Show all saved configuration presets.")
         print("Use preset name with --preset option to load saved settings.")
         print("")
         print("EXAMPLES:")
-        print("  screenrecorder --list-presets                      # Show saved presets")
-        print("  screenrecorder --preset \"meeting\"                # Use saved preset")
-        print("  screenrecorder --save-preset \"demo\"              # Save current settings")
+        print("  scap --list-presets                      # Show saved presets")
+        print("  scap --preset \"meeting\"                # Use saved preset")
+        print("  scap --save-preset \"demo\"              # Save current settings")
     }
     
     // MARK: - Handler Methods (Placeholder implementations)
@@ -458,9 +458,9 @@ struct ScreenRecorderCommand: AsyncParsableCommand {
         // Show usage examples after listing screens
         print("")
         print("USAGE:")
-        print("  screenrecorder --screen 1                          # Record primary display")
-        print("  screenrecorder --screen 2                          # Record secondary display")
-        print("  screenrecorder --screen 1 --area 0:0:1920:1080     # Record specific area")
+        print("  scap --screen 1                          # Record primary display")
+        print("  scap --screen 2                          # Record secondary display")
+        print("  scap --screen 1 --area 0:0:1920:1080     # Record specific area")
     }
     
     private func handleAppList() async throws {
@@ -474,9 +474,9 @@ struct ScreenRecorderCommand: AsyncParsableCommand {
         // Show usage examples after listing applications
         print("")
         print("USAGE:")
-        print("  screenrecorder --app Safari                        # Record Safari windows")
-        print("  screenrecorder --app \"Final Cut Pro\"             # Record app with spaces")
-        print("  screenrecorder --app Terminal --duration 15000     # Record for 15 seconds")
+        print("  scap --app Safari                        # Record Safari windows")
+        print("  scap --app \"Final Cut Pro\"             # Record app with spaces")
+        print("  scap --app Terminal --duration 15000     # Record for 15 seconds")
     }
     
     private func handleListPresets() async throws {
@@ -490,9 +490,9 @@ struct ScreenRecorderCommand: AsyncParsableCommand {
         // Show usage examples after listing presets
         print("")
         print("USAGE:")
-        print("  screenrecorder --save-preset \"meeting\"           # Save current settings")
-        print("  screenrecorder --preset \"meeting\"               # Use saved preset")
-        print("  screenrecorder --delete-preset \"old-config\"     # Delete preset")
+        print("  scap --save-preset \"meeting\"           # Save current settings")
+        print("  scap --preset \"meeting\"               # Use saved preset")
+        print("  scap --delete-preset \"old-config\"     # Delete preset")
     }
     
     private func handleDeletePreset(_ name: String) async throws {

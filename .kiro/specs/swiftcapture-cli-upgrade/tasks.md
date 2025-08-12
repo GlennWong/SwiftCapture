@@ -21,7 +21,7 @@
 
 - [x] 2. Implement CLI interface foundation
 
-  - [x] 2.1 Create ScreenRecorderCommand structure with ArgumentParser
+  - [x] 2.1 Create SwiftCaptureCommand structure with ArgumentParser
 
     - Define main command structure with all CLI options and flags
     - Implement basic argument parsing for duration, output, area, screen, app, and audio options

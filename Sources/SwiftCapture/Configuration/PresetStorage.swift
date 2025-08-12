@@ -10,7 +10,7 @@ class PresetStorage {
     /// - Throws: Error if presets directory cannot be created
     init() throws {
         let homeDirectory = FileManager.default.homeDirectoryForCurrentUser
-        presetsDirectory = homeDirectory.appendingPathComponent(".screenrecorder/presets")
+        presetsDirectory = homeDirectory.appendingPathComponent(".swiftcapture/presets")
         
         // Create presets directory if it doesn't exist
         if !FileManager.default.fileExists(atPath: presetsDirectory.path) {

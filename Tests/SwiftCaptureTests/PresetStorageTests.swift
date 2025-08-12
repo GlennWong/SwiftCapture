@@ -1,5 +1,5 @@
 import XCTest
-@testable import ScreenRecorder
+@testable import SwiftCapture
 
 final class PresetStorageTests: XCTestCase {
     
@@ -11,7 +11,7 @@ final class PresetStorageTests: XCTestCase {
         
         // Create temporary directory for test presets
         tempDirectory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("ScreenRecorderPresetTests")
+            .appendingPathComponent("SwiftCapturePresetTests")
             .appendingPathComponent(UUID().uuidString)
         
         try! FileManager.default.createDirectory(at: tempDirectory, 

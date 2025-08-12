@@ -1,4 +1,4 @@
-# ScreenRecorder 屏幕录制工具
+# SwiftCapture 屏幕录制工具
 
 一个专业的 macOS 屏幕录制工具，基于 ScreenCaptureKit 开发，支持强大的命令行界面、多屏录制、应用窗口录制，以及高级音视频控制。
 
@@ -10,13 +10,13 @@ screencapture -i Downloads/test.mp4 -V 3
 # ----
 
 # 查看屏幕列表
-./.build/release/ScreenRecorder --screen-list
+./.build/release/SwiftCapture --screen-list
 
 # 录制屏幕
 
 
 # 正常录制
-./.build/release/ScreenRecorder \
+./.build/release/SwiftCapture \
  --screen 2 \
  --area 0:0:1620:2160 \
  --duration 5000 \
@@ -24,7 +24,7 @@ screencapture -i Downloads/test.mp4 -V 3
  --output ~/Desktop/presentation.mp4
 
 # Built In Screen
-./.build/release/ScreenRecorder \
+./.build/release/SwiftCapture \
  --screen 1 \
  --area 0:74:1417:1890 \
  --duration 5000 \
@@ -32,11 +32,11 @@ screencapture -i Downloads/test.mp4 -V 3
  --output ~/Desktop/presentation-1.mp4
 
 # 查看运行App列表
-./.build/release/ScreenRecorder --app-list
+./.build/release/SwiftCapture --app-list
 # 录制App
-./.build/release/ScreenRecorder --duration 5000 --app NetEaseMusic --format mp4
+./.build/release/SwiftCapture --duration 5000 --app NetEaseMusic --format mp4
 
-./.build/release/ScreenRecorder --duration 5000 --app IINA --format mp4
+./.build/release/SwiftCapture --duration 5000 --app IINA --format mp4
 ```
 
 ## Issues
@@ -55,7 +55,7 @@ screencapture -i Downloads/test.mp4 -V 3
 • Use --list-presets to see saved configurations
 • Check system permissions in System Preferences > Security & Privacy
 
-USAGE: screenrecorder <options>
+USAGE: scap <options>
 
 OPTIONS:
   -d, --duration <duration>
@@ -112,36 +112,36 @@ OPTIONS:
 ```bash
 # 克隆仓库
 git clone <repository-url>
-cd ScreenRecorder
+cd SwiftCapture
 
 # 编译发布版本
 swift build -c release
 
 # 可执行文件位置：
-.build/release/ScreenRecorder
+.build/release/SwiftCapture
 ```
 
 ### Homebrew（即将上线）
 
 ```bash
 # 即将通过 Homebrew 提供
-brew install screenrecorder
+brew install scap
 ```
 
 ## 快速开始
 
 ```bash
 # 基础 10 秒录制
-screenrecorder
+scap
 
 # 录制 30 秒
-screenrecorder --duration 30000
+scap --duration 30000
 
 # 保存到指定文件
-screenrecorder --output ~/Desktop/demo.mov
+scap --output ~/Desktop/demo.mov
 
 # 录制并包含麦克风音频
-screenrecorder --enable-microphone --duration 15000
+scap --enable-microphone --duration 15000
 ```
 
 ## 用法说明
@@ -149,106 +149,106 @@ screenrecorder --enable-microphone --duration 15000
 ### 基本语法
 
 ```bash
-screenrecorder [OPTIONS]
+scap [OPTIONS]
 ```
 
 ### 时长控制
 
 ```bash
 # 指定录制时长（毫秒）
-screenrecorder --duration 5000          # 5 秒
-screenrecorder -d 30000                 # 30 秒（短参数）
-screenrecorder --duration 120000        # 2 分钟
+scap --duration 5000          # 5 秒
+scap -d 30000                 # 30 秒（短参数）
+scap --duration 120000        # 2 分钟
 ```
 
 ### 输出文件管理
 
 ```bash
 # 保存到指定位置
-screenrecorder --output ~/Desktop/recording.mov
-screenrecorder -o ./videos/demo.mp4
+scap --output ~/Desktop/recording.mov
+scap -o ./videos/demo.mp4
 
 # 默认：当前目录下按时间戳命名（YYYY-MM-DD_HH-MM-SS.mov）
-screenrecorder  # 生成如：2024-01-15_14-30-25.mov
+scap  # 生成如：2024-01-15_14-30-25.mov
 ```
 
 ### 屏幕与显示器选择
 
 ```bash
-# 列出可用屏幕	screenrecorder --screen-list
-screenrecorder -l
+# 列出可用屏幕	scap --screen-list
+scap -l
 
 # 录制指定屏幕
-screenrecorder --screen 1               # 主显示器
-screenrecorder --screen 2               # 次显示器
-screenrecorder -s 2                     # 短参数
+scap --screen 1               # 主显示器
+scap --screen 2               # 次显示器
+scap -s 2                     # 短参数
 ```
 
 ### 区域选择
 
 ```bash
 # 录制指定区域（x:y:width:height）
-screenrecorder --area 0:0:1920:1080     # 全高清区域
-screenrecorder --area 100:100:800:600   # 800x600，起点 100,100
-screenrecorder -a 0:0:1280:720          # 720p 区域（短参数）
+scap --area 0:0:1920:1080     # 全高清区域
+scap --area 100:100:800:600   # 800x600，起点 100,100
+scap -a 0:0:1280:720          # 720p 区域（短参数）
 
 # 可与屏幕选择组合
-screenrecorder --screen 2 --area 0:0:1920:1080
+scap --screen 2 --area 0:0:1920:1080
 ```
 
 ### 应用窗口录制
 
 ```bash
-# 列出正在运行的应用	screenrecorder --app-list
-screenrecorder -L
+# 列出正在运行的应用	scap --app-list
+scap -L
 
 # 录制指定应用窗口
-screenrecorder --app Safari
-screenrecorder --app "Final Cut Pro"    # 带空格需加引号
-screenrecorder -A Terminal              # 短参数
+scap --app Safari
+scap --app "Final Cut Pro"    # 带空格需加引号
+scap -A Terminal              # 短参数
 ```
 
 ### 音频录制
 
 ```bash
 # 启用麦克风录制（系统音频默认包含）
-screenrecorder --enable-microphone
-screenrecorder -m                       # 短参数
+scap --enable-microphone
+scap -m                       # 短参数
 
 # 设置音频质量
-screenrecorder --enable-microphone --audio-quality high
+scap --enable-microphone --audio-quality high
 ```
 
 ### 画质与格式选项
 
 ```bash
 # 帧率控制
-screenrecorder --fps 15                 # 静态内容建议
-screenrecorder --fps 30                 # 标准（默认）
-screenrecorder --fps 60                 # 流畅运动
+scap --fps 15                 # 静态内容建议
+scap --fps 30                 # 标准（默认）
+scap --fps 60                 # 流畅运动
 
 # 画质预设
-screenrecorder --quality low            # 文件较小（约 2Mbps）
-screenrecorder --quality medium         # 平衡（默认，约 5Mbps）
-screenrecorder --quality high           # 最佳画质（约 10Mbps）
+scap --quality low            # 文件较小（约 2Mbps）
+scap --quality medium         # 平衡（默认，约 5Mbps）
+scap --quality high           # 最佳画质（约 10Mbps）
 
 # 输出格式
-screenrecorder --format mov             # QuickTime（默认）
-screenrecorder --format mp4             # MP4，兼容性更好
+scap --format mov             # QuickTime（默认）
+scap --format mp4             # MP4，兼容性更好
 ```
 
 ### 高级功能
 
 ```bash
 # 录制中显示鼠标指针
-screenrecorder --show-cursor
+scap --show-cursor
 
 # 录制前倒计时
-screenrecorder --countdown 5            # 5 秒倒计时
-screenrecorder --countdown 3 --show-cursor
+scap --countdown 5            # 5 秒倒计时
+scap --countdown 3 --show-cursor
 
 # 多参数组合
-screenrecorder --screen 2 --area 0:0:1920:1080 --enable-microphone \
+scap --screen 2 --area 0:0:1920:1080 --enable-microphone \
                --fps 30 --quality high --countdown 5 --show-cursor \
                --output ~/Desktop/presentation.mp4
 ```
@@ -257,19 +257,19 @@ screenrecorder --screen 2 --area 0:0:1920:1080 --enable-microphone \
 
 ```bash
 # 保存当前配置为预设
-screenrecorder --save-preset "meeting"
-screenrecorder --duration 30000 --enable-microphone --quality high \
+scap --save-preset "meeting"
+scap --duration 30000 --enable-microphone --quality high \
                --save-preset "presentation"
 
 # 使用已保存预设
-screenrecorder --preset "meeting"
-screenrecorder --preset "presentation" --output ~/Desktop/demo.mov
+scap --preset "meeting"
+scap --preset "presentation" --output ~/Desktop/demo.mov
 
 # 列出所有预设
-screenrecorder --list-presets
+scap --list-presets
 
 # 删除预设
-screenrecorder --delete-preset "old-config"
+scap --delete-preset "old-config"
 ```
 
 ## 示例
@@ -278,13 +278,13 @@ screenrecorder --delete-preset "old-config"
 
 ```bash
 # 快速 10 秒屏幕录制
-screenrecorder
+scap
 
 # 30 秒演示录制并倒计时
-screenrecorder --duration 30000 --countdown 3 --show-cursor
+scap --duration 30000 --countdown 3 --show-cursor
 
 # 高质量应用演示
-screenrecorder --app Safari --duration 60000 --quality high --fps 60 \
+scap --app Safari --duration 60000 --quality high --fps 60 \
                --output ~/Desktop/safari-demo.mp4
 ```
 
@@ -292,43 +292,43 @@ screenrecorder --app Safari --duration 60000 --quality high --fps 60 \
 
 ```bash
 # 列出可用显示器
-screenrecorder --screen-list
+scap --screen-list
 
 # 录制次显示器全高清
-screenrecorder --screen 2 --area 0:0:1920:1080 --quality high
+scap --screen 2 --area 0:0:1920:1080 --quality high
 
 # 主显示器自定义区域
-screenrecorder --screen 1 --area 0:0:2560:1440 --format mp4
+scap --screen 1 --area 0:0:2560:1440 --format mp4
 ```
 
 ### 音频录制
 
 ```bash
 # 教学录制并启用麦克风
-screenrecorder --enable-microphone --duration 300000 --quality high \
+scap --enable-microphone --duration 300000 --quality high \
                --show-cursor --countdown 5
 
 # 高质量音频录制
-screenrecorder --enable-microphone --audio-quality high --quality high
+scap --enable-microphone --audio-quality high --quality high
 ```
 
 ### 预设工作流
 
 ```bash
 # 为不同场景创建预设
-screenrecorder --duration 30000 --enable-microphone --quality high \
+scap --duration 30000 --enable-microphone --quality high \
                --fps 30 --show-cursor --save-preset "tutorial"
 
-screenrecorder --app Safari --duration 60000 --quality medium \
+scap --app Safari --duration 60000 --quality medium \
                --fps 60 --save-preset "browser-demo"
 
-screenrecorder --screen 2 --quality low --fps 15 \
+scap --screen 2 --quality low --fps 15 \
                --save-preset "secondary-screen"
 
 # 使用预设
-screenrecorder --preset "tutorial" --output ~/Desktop/lesson1.mov
-screenrecorder --preset "browser-demo"
-screenrecorder --preset "secondary-screen" --duration 120000
+scap --preset "tutorial" --output ~/Desktop/lesson1.mov
+scap --preset "browser-demo"
+scap --preset "secondary-screen" --duration 120000
 ```
 
 ## 命令参考
@@ -501,7 +501,7 @@ TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
 mkdir -p "$OUTPUT_DIR"
 
 # 用预设录制
-screenrecorder --preset "meeting" \
+scap --preset "meeting" \
                --duration "$DURATION" \
                --output "$OUTPUT_DIR/meeting_$TIMESTAMP.mov"
 
@@ -516,7 +516,7 @@ apps=("Safari" "Terminal" "Finder")
 
 for app in "${apps[@]}"; do
     echo "正在录制 $app..."
-    screenrecorder --app "$app" --duration 10000 \
+    scap --app "$app" --duration 10000 \
                    --output "~/Desktop/${app}_demo.mov"
     sleep 2  # 录制间隔
  done
@@ -526,7 +526,7 @@ for app in "${apps[@]}"; do
 
 ```bash
 # 与 ffmpeg 联合后处理
-screenrecorder --duration 30000 --quality high --output temp_recording.mov
+scap --duration 30000 --quality high --output temp_recording.mov
 ffmpeg -i temp_recording.mov -vf "scale=1280:720" final_recording.mp4
 rm temp_recording.mov
 ```
@@ -544,7 +544,7 @@ rm temp_recording.mov
 ```bash
 # 克隆仓库
 git clone <repository-url>
-cd ScreenRecorder
+cd SwiftCapture
 
 # 清理旧构建
 swift package clean
@@ -559,21 +559,21 @@ swift build -c release
 swift test
 
 # 全局安装（可选）
-cp .build/release/ScreenRecorder /usr/local/bin/screenrecorder
+cp .build/release/SwiftCapture /usr/local/bin/scap
 ```
 
 ### 开发调试
 
 ```bash
 # 用 Swift 直接运行
-swift run ScreenRecorder --help
+swift run SwiftCapture --help
 
 # 运行带参数
-swift run ScreenRecorder --duration 5000 --output test.mov
+swift run SwiftCapture --duration 5000 --output test.mov
 
 # 编译并运行发布版
 swift build -c release
-.build/release/ScreenRecorder --screen-list
+.build/release/SwiftCapture --screen-list
 ```
 
 ## 贡献方式
@@ -612,4 +612,4 @@ swift build -c release
 
 ---
 
-更多信息请使用 `screenrecorder --help` 或访问项目仓库。
+更多信息请使用 `scap --help` 或访问项目仓库。

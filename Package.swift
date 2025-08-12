@@ -2,7 +2,7 @@
 import PackageDescription
 
 let package = Package(
-    name: "ScreenRecorder",
+    name: "SwiftCapture",
     platforms: [
         .macOS(.v12)
     ],
@@ -11,7 +11,7 @@ let package = Package(
     ],
     targets: [
         .executableTarget(
-            name: "ScreenRecorder",
+            name: "SwiftCapture",
             dependencies: [
                 .product(name: "ArgumentParser", package: "swift-argument-parser")
             ],
@@ -23,8 +23,8 @@ let package = Package(
             ]
         ),
         .testTarget(
-            name: "ScreenRecorderTests",
-            dependencies: ["ScreenRecorder"],
+            name: "SwiftCaptureTests",
+            dependencies: ["SwiftCapture"],
             linkerSettings: [
                 .linkedFramework("ScreenCaptureKit"),
                 .linkedFramework("AVFoundation"),

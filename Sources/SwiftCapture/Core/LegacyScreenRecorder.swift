@@ -311,7 +311,7 @@ class LegacyScreenRecorder {
                         progressIndicator.stopProgressWithError(error)
                         continuation.resume(throwing: error)
                     } else {
-                        let unknownError = NSError(domain: "com.screenrecorder", code: -1, userInfo: [NSLocalizedDescriptionKey: "未知写入错误"])
+                        let unknownError = NSError(domain: "com.swiftcapture", code: -1, userInfo: [NSLocalizedDescriptionKey: "未知写入错误"])
                         progressIndicator.stopProgressWithError(unknownError)
                         continuation.resume(throwing: unknownError)
                     }
@@ -595,7 +595,7 @@ class LegacyScreenRecorder {
                         // switchAudioOutput(to: "MacBook Pro Speakers")
                         continuation.resume(throwing: error)
                     } else {
-                        let unknownError = NSError(domain: "com.screenrecorder", code: -1, userInfo: [NSLocalizedDescriptionKey: "未知写入错误"])
+                        let unknownError = NSError(domain: "com.swiftcapture", code: -1, userInfo: [NSLocalizedDescriptionKey: "未知写入错误"])
                         progressIndicator.stopProgressWithError(unknownError)
                         // switchAudioOutput(to: "MacBook Pro Speakers")
                         continuation.resume(throwing: unknownError)

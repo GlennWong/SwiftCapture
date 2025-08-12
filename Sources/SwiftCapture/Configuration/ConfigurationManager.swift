@@ -15,10 +15,10 @@ class ConfigurationManager {
     }
     
     /// Create recording configuration from CLI command
-    /// - Parameter command: ScreenRecorderCommand with CLI options
+    /// - Parameter command: SwiftCaptureCommand with CLI options
     /// - Returns: Validated RecordingConfiguration
     /// - Throws: ValidationError if any parameters are invalid
-    func createConfiguration(from command: ScreenRecorderCommand) throws -> RecordingConfiguration {
+    func createConfiguration(from command: SwiftCaptureCommand) throws -> RecordingConfiguration {
         
         // Start with preset if specified
         var baseConfig: RecordingConfiguration?

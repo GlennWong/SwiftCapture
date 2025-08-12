@@ -1,4 +1,4 @@
-# ScreenRecorder
+# SwiftCapture
 
 A professional screen recording tool for macOS built with ScreenCaptureKit, featuring comprehensive CLI interface, multi-screen support, application window recording, and advanced audio/video controls.
 
@@ -30,36 +30,36 @@ A professional screen recording tool for macOS built with ScreenCaptureKit, feat
 ```bash
 # Clone the repository
 git clone <repository-url>
-cd ScreenRecorder
+cd SwiftCapture
 
 # Build release version
 swift build -c release
 
 # The executable will be available at:
-.build/release/ScreenRecorder
+.build/release/SwiftCapture
 ```
 
 ### Homebrew (Coming Soon)
 
 ```bash
 # Will be available via Homebrew
-brew install screenrecorder
+brew install swiftcapture
 ```
 
 ## Quick Start
 
 ```bash
 # Basic 10-second recording
-screenrecorder
+scap
 
 # Record for 30 seconds
-screenrecorder --duration 30000
+scap --duration 30000
 
 # Record to specific file
-screenrecorder --output ~/Desktop/demo.mov
+scap --output ~/Desktop/demo.mov
 
 # Record with microphone audio
-screenrecorder --enable-microphone --duration 15000
+scap --enable-microphone --duration 15000
 ```
 
 ## Usage
@@ -67,108 +67,108 @@ screenrecorder --enable-microphone --duration 15000
 ### Basic Syntax
 
 ```bash
-screenrecorder [OPTIONS]
+scap [OPTIONS]
 ```
 
 ### Duration Control
 
 ```bash
 # Record for specific duration (in milliseconds)
-screenrecorder --duration 5000          # 5 seconds
-screenrecorder -d 30000                  # 30 seconds (short flag)
-screenrecorder --duration 120000         # 2 minutes
+scap --duration 5000          # 5 seconds
+scap -d 30000                  # 30 seconds (short flag)
+scap --duration 120000         # 2 minutes
 ```
 
 ### Output File Management
 
 ```bash
 # Save to specific location
-screenrecorder --output ~/Desktop/recording.mov
-screenrecorder -o ./videos/demo.mp4
+scap --output ~/Desktop/recording.mov
+scap -o ./videos/demo.mp4
 
 # Default: Current directory with timestamp (YYYY-MM-DD_HH-MM-SS.mov)
-screenrecorder  # Creates: 2024-01-15_14-30-25.mov
+scap  # Creates: 2024-01-15_14-30-25.mov
 ```
 
 ### Screen and Display Selection
 
 ```bash
 # List available screens
-screenrecorder --screen-list
-screenrecorder -l
+scap --screen-list
+scap -l
 
 # Record from specific screen
-screenrecorder --screen 1               # Primary display
-screenrecorder --screen 2               # Secondary display
-screenrecorder -s 2                     # Short flag
+scap --screen 1               # Primary display
+scap --screen 2               # Secondary display
+scap -s 2                     # Short flag
 ```
 
 ### Area Selection
 
 ```bash
 # Record specific area (x:y:width:height)
-screenrecorder --area 0:0:1920:1080     # Full HD area
-screenrecorder --area 100:100:800:600   # 800x600 at position 100,100
-screenrecorder -a 0:0:1280:720          # 720p area (short flag)
+scap --area 0:0:1920:1080     # Full HD area
+scap --area 100:100:800:600   # 800x600 at position 100,100
+scap -a 0:0:1280:720          # 720p area (short flag)
 
 # Combine with screen selection
-screenrecorder --screen 2 --area 0:0:1920:1080
+scap --screen 2 --area 0:0:1920:1080
 ```
 
 ### Application Window Recording
 
 ```bash
 # List running applications
-screenrecorder --app-list
-screenrecorder -L
+scap --app-list
+scap -L
 
 # Record specific application
-screenrecorder --app Safari
-screenrecorder --app "Final Cut Pro"    # Quote names with spaces
-screenrecorder -A Terminal               # Short flag
+scap --app Safari
+scap --app "Final Cut Pro"    # Quote names with spaces
+scap -A Terminal               # Short flag
 ```
 
 ### Audio Recording
 
 ```bash
 # Enable microphone recording (system audio always included)
-screenrecorder --enable-microphone
-screenrecorder -m                       # Short flag
+scap --enable-microphone
+scap -m                       # Short flag
 
 # Set audio quality
-screenrecorder --enable-microphone --audio-quality high
+scap --enable-microphone --audio-quality high
 ```
 
 ### Quality and Format Options
 
 ```bash
 # Frame rate control
-screenrecorder --fps 15                 # Lower for static content
-screenrecorder --fps 30                 # Standard (default)
-screenrecorder --fps 60                 # Smooth motion
+scap --fps 15                 # Lower for static content
+scap --fps 30                 # Standard (default)
+scap --fps 60                 # Smooth motion
 
 # Quality presets
-screenrecorder --quality low            # Smaller files (~2Mbps)
-screenrecorder --quality medium         # Balanced (default, ~5Mbps)
-screenrecorder --quality high           # Best quality (~10Mbps)
+scap --quality low            # Smaller files (~2Mbps)
+scap --quality medium         # Balanced (default, ~5Mbps)
+scap --quality high           # Best quality (~10Mbps)
 
 # Output format
-screenrecorder --format mov             # QuickTime (default)
-screenrecorder --format mp4             # MP4 for broader compatibility
+scap --format mov             # QuickTime (default)
+scap --format mp4             # MP4 for broader compatibility
 ```
 
 ### Advanced Features
 
 ```bash
 # Show cursor in recording
-screenrecorder --show-cursor
+scap --show-cursor
 
 # Countdown before recording
-screenrecorder --countdown 5            # 5-second countdown
-screenrecorder --countdown 3 --show-cursor
+scap --countdown 5            # 5-second countdown
+scap --countdown 3 --show-cursor
 
 # Combine multiple options
-screenrecorder --screen 2 --area 0:0:1920:1080 --enable-microphone \
+scap --screen 2 --area 0:0:1920:1080 --enable-microphone \
                --fps 30 --quality high --countdown 5 --show-cursor \
                --output ~/Desktop/presentation.mp4
 ```
@@ -177,19 +177,19 @@ screenrecorder --screen 2 --area 0:0:1920:1080 --enable-microphone \
 
 ```bash
 # Save current settings as preset
-screenrecorder --save-preset "meeting"
-screenrecorder --duration 30000 --enable-microphone --quality high \
+scap --save-preset "meeting"
+scap --duration 30000 --enable-microphone --quality high \
                --save-preset "presentation"
 
 # Use saved preset
-screenrecorder --preset "meeting"
-screenrecorder --preset "presentation" --output ~/Desktop/demo.mov
+scap --preset "meeting"
+scap --preset "presentation" --output ~/Desktop/demo.mov
 
 # List all presets
-screenrecorder --list-presets
+scap --list-presets
 
 # Delete preset
-screenrecorder --delete-preset "old-config"
+scap --delete-preset "old-config"
 ```
 
 ## Examples
@@ -198,13 +198,13 @@ screenrecorder --delete-preset "old-config"
 
 ```bash
 # Quick 10-second screen capture
-screenrecorder
+scap
 
 # 30-second presentation recording with countdown
-screenrecorder --duration 30000 --countdown 3 --show-cursor
+scap --duration 30000 --countdown 3 --show-cursor
 
 # High-quality application demo
-screenrecorder --app Safari --duration 60000 --quality high --fps 60 \
+scap --app Safari --duration 60000 --quality high --fps 60 \
                --output ~/Desktop/safari-demo.mp4
 ```
 
@@ -212,43 +212,43 @@ screenrecorder --app Safari --duration 60000 --quality high --fps 60 \
 
 ```bash
 # List available displays
-screenrecorder --screen-list
+scap --screen-list
 
 # Record secondary display in full HD
-screenrecorder --screen 2 --area 0:0:1920:1080 --quality high
+scap --screen 2 --area 0:0:1920:1080 --quality high
 
 # Record primary display with custom area
-screenrecorder --screen 1 --area 0:0:2560:1440 --format mp4
+scap --screen 1 --area 0:0:2560:1440 --format mp4
 ```
 
 ### Audio Recording
 
 ```bash
 # Record with microphone for tutorials
-screenrecorder --enable-microphone --duration 300000 --quality high \
+scap --enable-microphone --duration 300000 --quality high \
                --show-cursor --countdown 5
 
 # High-quality audio recording
-screenrecorder --enable-microphone --audio-quality high --quality high
+scap --enable-microphone --audio-quality high --quality high
 ```
 
 ### Preset Workflows
 
 ```bash
 # Create presets for different scenarios
-screenrecorder --duration 30000 --enable-microphone --quality high \
+scap --duration 30000 --enable-microphone --quality high \
                --fps 30 --show-cursor --save-preset "tutorial"
 
-screenrecorder --app Safari --duration 60000 --quality medium \
+scap --app Safari --duration 60000 --quality medium \
                --fps 60 --save-preset "browser-demo"
 
-screenrecorder --screen 2 --quality low --fps 15 \
+scap --screen 2 --quality low --fps 15 \
                --save-preset "secondary-screen"
 
 # Use presets
-screenrecorder --preset "tutorial" --output ~/Desktop/lesson1.mov
-screenrecorder --preset "browser-demo"
-screenrecorder --preset "secondary-screen" --duration 120000
+scap --preset "tutorial" --output ~/Desktop/lesson1.mov
+scap --preset "browser-demo"
+scap --preset "secondary-screen" --duration 120000
 ```
 
 ## Command Reference
@@ -410,7 +410,7 @@ TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
 mkdir -p "$OUTPUT_DIR"
 
 # Record with preset
-screenrecorder --preset "meeting" \
+scap --preset "meeting" \
                --duration "$DURATION" \
                --output "$OUTPUT_DIR/meeting_$TIMESTAMP.mov"
 
@@ -425,7 +425,7 @@ apps=("Safari" "Terminal" "Finder")
 
 for app in "${apps[@]}"; do
     echo "Recording $app..."
-    screenrecorder --app "$app" --duration 10000 \
+    scap --app "$app" --duration 10000 \
                    --output "~/Desktop/${app}_demo.mov"
     sleep 2  # Brief pause between recordings
 done
@@ -435,7 +435,7 @@ done
 
 ```bash
 # Combine with ffmpeg for post-processing
-screenrecorder --duration 30000 --quality high --output temp_recording.mov
+scap --duration 30000 --quality high --output temp_recording.mov
 ffmpeg -i temp_recording.mov -vf "scale=1280:720" final_recording.mp4
 rm temp_recording.mov
 ```
@@ -468,7 +468,7 @@ swift build -c release
 swift test
 
 # Install globally (optional)
-cp .build/release/ScreenRecorder /usr/local/bin/screenrecorder
+cp .build/release/ScreenRecorder /usr/local/bin/scap
 ```
 
 ### Development
@@ -519,4 +519,4 @@ swift build -c release
 
 ---
 
-For more information, use `screenrecorder --help` or visit the project repository.
+For more information, use `scap --help` or visit the project repository.

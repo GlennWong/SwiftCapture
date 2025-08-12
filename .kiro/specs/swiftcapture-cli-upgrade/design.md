@@ -2,7 +2,7 @@
 
 ## Overview
 
-This design document outlines the architecture and implementation approach for upgrading the existing ScreenRecorder CLI tool into a comprehensive, professional-grade screen recording application. The upgrade will transform the current basic argument parsing into a robust CLI interface using Swift ArgumentParser, implement modular architecture for different recording modes, and add advanced features like multi-screen support, application window recording, and audio control.
+This design document outlines the architecture and implementation approach for upgrading the existing SwiftCapture CLI tool into a comprehensive, professional-grade screen recording application. The upgrade will transform the current basic argument parsing into a robust CLI interface using Swift ArgumentParser, implement modular architecture for different recording modes, and add advanced features like multi-screen support, application window recording, and audio control.
 
 The design follows modern Swift best practices, leverages ScreenCaptureKit capabilities, and ensures the tool is suitable for distribution via Homebrew with comprehensive documentation.
 
@@ -51,7 +51,7 @@ The application will be organized into the following modules:
 
 **Primary Components:**
 
-- `ScreenRecorderCommand`: Main command structure using Swift ArgumentParser
+- `SwiftCaptureCommand`: Main command structure using Swift ArgumentParser
 - `CommandLineOptions`: Struct containing all CLI options and flags
 - `HelpFormatter`: Custom help text formatting for bilingual support
 
@@ -59,9 +59,9 @@ The application will be organized into the following modules:
 
 ```swift
 @main
-struct ScreenRecorderCommand: AsyncParsableCommand {
+struct SwiftCaptureCommand: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
-        commandName: "screenrecorder",
+        commandName: "scap",
         abstract: "Professional screen recording tool for macOS",
         version: "2.0.0"
     )
@@ -125,7 +125,7 @@ struct ScreenRecorderCommand: AsyncParsableCommand {
     var deletePreset: String?
 
     func run() async throws {
-        let recorder = ScreenRecorder()
+        let recorder = SwiftCapture()
         try await recorder.execute(with: self)
     }
 }
@@ -135,21 +135,21 @@ struct ScreenRecorderCommand: AsyncParsableCommand {
 
 **Primary Components:**
 
-- `ScreenRecorder`: Main coordinator class
+- `SwiftCapture`: Main coordinator class
 - `RecordingSession`: Manages individual recording sessions
 - `RecordingConfiguration`: Immutable configuration object
 
 **Key Interfaces:**
 
 ```swift
-class ScreenRecorder {
+class SwiftCapture {
     private let displayManager: DisplayManager
     private let applicationManager: ApplicationManager
     private let audioManager: AudioManager
     private let outputManager: OutputManager
     private let configManager: ConfigurationManager
 
-    func execute(with options: ScreenRecorderCommand) async throws {
+    func execute(with options: SwiftCaptureCommand) async throws {
         // Handle list operations first
         if options.screenList { return try displayManager.listScreens() }
         if options.appList { return try applicationManager.listApplications() }
@@ -172,7 +172,7 @@ class ScreenRecorder {
         try await performRecording(with: config)
     }
 
-    private func createConfiguration(from options: ScreenRecorderCommand) throws -> RecordingConfiguration
+    private func createConfiguration(from options: SwiftCaptureCommand) throws -> RecordingConfiguration
     private func performRecording(with config: RecordingConfiguration) async throws
 }
 
@@ -418,7 +418,7 @@ struct RecordingPreset: Codable {
 ### Error Types
 
 ```swift
-enum ScreenRecorderError: LocalizedError {
+enum SwiftCaptureError: LocalizedError {
     case invalidDuration(Int)
     case invalidArea(String)
     case screenNotFound(Int)

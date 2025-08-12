@@ -1,5 +1,5 @@
 import XCTest
-@testable import ScreenRecorder
+@testable import SwiftCapture
 
 final class MockApplicationManagerTests: XCTestCase {
     
@@ -35,7 +35,7 @@ final class MockApplicationManagerTests: XCTestCase {
             name: "Xcode",
             processID: 67890,
             windows: [
-                WindowInfo(windowID: 3, title: "ScreenRecorder.xcodeproj", frame: CGRect(x: 200, y: 200, width: 1400, height: 900), isOnScreen: true)
+                WindowInfo(windowID: 3, title: "SwiftCapture.xcodeproj", frame: CGRect(x: 200, y: 200, width: 1400, height: 900), isOnScreen: true)
             ],
             isRunning: true
         )

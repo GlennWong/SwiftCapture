@@ -1,5 +1,5 @@
 import XCTest
-@testable import ScreenRecorder
+@testable import SwiftCapture
 
 final class ConfigurationManagerTests: XCTestCase {
     
@@ -11,7 +11,7 @@ final class ConfigurationManagerTests: XCTestCase {
         
         // Create temporary directory for test presets
         tempDirectory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("ScreenRecorderTests")
+            .appendingPathComponent("SwiftCaptureTests")
             .appendingPathComponent(UUID().uuidString)
         
         try! FileManager.default.createDirectory(at: tempDirectory, 
@@ -37,51 +37,51 @@ final class ConfigurationManagerTests: XCTestCase {
     // MARK: - Configuration Creation Tests
     
     func testCreateConfiguration_DefaultValues_ShouldCreateValidConfiguration() throws {
-        // This test is disabled because it requires actual ScreenRecorderCommand
+        // This test is disabled because it requires actual SwiftCaptureCommand
         // We'll test the individual components instead
-        XCTAssertTrue(true, "Configuration creation requires real ScreenRecorderCommand - testing components individually")
+        XCTAssertTrue(true, "Configuration creation requires real SwiftCaptureCommand - testing components individually")
     }
     
     func testCreateConfiguration_CustomValues_ShouldCreateCorrectConfiguration() throws {
-        // This test is disabled because it requires actual ScreenRecorderCommand
+        // This test is disabled because it requires actual SwiftCaptureCommand
         // We'll test the individual components instead
-        XCTAssertTrue(true, "Configuration creation requires real ScreenRecorderCommand - testing components individually")
+        XCTAssertTrue(true, "Configuration creation requires real SwiftCaptureCommand - testing components individually")
     }
     
     func testCreateConfiguration_WithArea_ShouldParseAreaCorrectly() throws {
-        // This test is disabled because it requires actual ScreenRecorderCommand
+        // This test is disabled because it requires actual SwiftCaptureCommand
         // We'll test the individual components instead
-        XCTAssertTrue(true, "Configuration creation requires real ScreenRecorderCommand - testing components individually")
+        XCTAssertTrue(true, "Configuration creation requires real SwiftCaptureCommand - testing components individually")
     }
     
     func testCreateConfiguration_WithApplication_ShouldSetApplicationMode() throws {
-        // This test is disabled because it requires actual ScreenRecorderCommand
+        // This test is disabled because it requires actual SwiftCaptureCommand
         // We'll test the individual components instead
-        XCTAssertTrue(true, "Configuration creation requires real ScreenRecorderCommand - testing components individually")
+        XCTAssertTrue(true, "Configuration creation requires real SwiftCaptureCommand - testing components individually")
     }
     
     func testCreateConfiguration_InvalidDuration_ShouldThrow() {
-        // This test is disabled because it requires actual ScreenRecorderCommand
+        // This test is disabled because it requires actual SwiftCaptureCommand
         // We'll test the individual components instead
-        XCTAssertTrue(true, "Configuration creation requires real ScreenRecorderCommand - testing components individually")
+        XCTAssertTrue(true, "Configuration creation requires real SwiftCaptureCommand - testing components individually")
     }
     
     func testCreateConfiguration_InvalidFPS_ShouldThrow() {
-        // This test is disabled because it requires actual ScreenRecorderCommand
+        // This test is disabled because it requires actual SwiftCaptureCommand
         // We'll test the individual components instead
-        XCTAssertTrue(true, "Configuration creation requires real ScreenRecorderCommand - testing components individually")
+        XCTAssertTrue(true, "Configuration creation requires real SwiftCaptureCommand - testing components individually")
     }
     
     func testCreateConfiguration_InvalidQuality_ShouldThrow() {
-        // This test is disabled because it requires actual ScreenRecorderCommand
+        // This test is disabled because it requires actual SwiftCaptureCommand
         // We'll test the individual components instead
-        XCTAssertTrue(true, "Configuration creation requires real ScreenRecorderCommand - testing components individually")
+        XCTAssertTrue(true, "Configuration creation requires real SwiftCaptureCommand - testing components individually")
     }
     
     func testCreateConfiguration_InvalidFormat_ShouldThrow() {
-        // This test is disabled because it requires actual ScreenRecorderCommand
+        // This test is disabled because it requires actual SwiftCaptureCommand
         // We'll test the individual components instead
-        XCTAssertTrue(true, "Configuration creation requires real ScreenRecorderCommand - testing components individually")
+        XCTAssertTrue(true, "Configuration creation requires real SwiftCaptureCommand - testing components individually")
     }
     
     // MARK: - Configuration Validation Tests
@@ -148,8 +148,8 @@ final class ConfigurationManagerTests: XCTestCase {
     
     // MARK: - Helper Methods
     
-    private func createMockCommand() -> MockScreenRecorderCommand {
-        return MockScreenRecorderCommand()
+    private func createMockCommand() -> MockSwiftCaptureCommand {
+        return MockSwiftCaptureCommand()
     }
     
     private func createValidConfiguration() -> RecordingConfiguration {
@@ -169,7 +169,7 @@ final class ConfigurationManagerTests: XCTestCase {
 
 // MARK: - Mock Command
 
-struct MockScreenRecorderCommand {
+struct MockSwiftCaptureCommand {
     var duration: Int = 10000
     var output: String? = nil
     var area: String? = nil
