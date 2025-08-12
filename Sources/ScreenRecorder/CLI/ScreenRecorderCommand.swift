@@ -23,6 +23,9 @@ struct ScreenRecorderCommand: AsyncParsableCommand {
     @Option(name: [.short, .long], help: "Output file path (default: current directory with timestamp)")
     var output: String?
     
+    @Flag(name: [.customShort("f"), .customLong("force")], help: "Force overwrite existing output file without prompting")
+    var force: Bool = false
+    
     // MARK: - Screen/Area Selection
     @Option(name: [.short, .long], help: "Recording area in format x:y:width:height (default: full screen)")
     var area: String?
@@ -227,7 +230,7 @@ struct ScreenRecorderCommand: AsyncParsableCommand {
             let hasRecordingOptions = duration != 10000 || output != nil || area != nil || 
                                     screen != 1 || app != nil || enableMicrophone || 
                                     fps != 30 || quality != "medium" || format != "mov" || 
-                                    audioQuality != "medium" || showCursor || countdown != 0
+                                    audioQuality != "medium" || showCursor || countdown != 0 || force
             
             if hasRecordingOptions {
                 throw ValidationError(
@@ -242,7 +245,7 @@ struct ScreenRecorderCommand: AsyncParsableCommand {
             let hasOtherOptions = duration != 10000 || output != nil || area != nil || 
                                 screen != 1 || app != nil || enableMicrophone || 
                                 fps != 30 || quality != "medium" || format != "mov" || 
-                                audioQuality != "medium" || showCursor || countdown != 0 || savePreset != nil || preset != nil
+                                audioQuality != "medium" || showCursor || countdown != 0 || force || savePreset != nil || preset != nil
             
             if hasOtherOptions {
                 throw ValidationError(

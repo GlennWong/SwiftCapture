@@ -255,6 +255,27 @@ final class ParameterValidatorTests: XCTestCase {
         XCTAssertTrue(url2.lastPathComponent.hasSuffix(".mov"))
         XCTAssertTrue(url2.lastPathComponent.contains("-"))
     }
+    
+    func testValidateOutputPath_WithForceFlag_ShouldReturnOriginalURL() throws {
+        // Create a temporary file to test force overwrite behavior
+        let tempDir = FileManager.default.temporaryDirectory
+        let testFile = tempDir.appendingPathComponent("test-force.mov")
+        
+        // Create the file
+        FileManager.default.createFile(atPath: testFile.path, contents: Data("test".utf8))
+        defer {
+            try? FileManager.default.removeItem(at: testFile)
+        }
+        
+        // Test without force flag (should generate numbered filename)
+        let url1 = try validator.validateOutputPath(testFile.path, format: .mov, overwrite: false)
+        XCTAssertNotEqual(url1.lastPathComponent, "test-force.mov")
+        XCTAssertTrue(url1.lastPathComponent.contains("test-force"))
+        
+        // Test with force flag (should return original filename)
+        let url2 = try validator.validateOutputPath(testFile.path, format: .mov, overwrite: true)
+        XCTAssertEqual(url2.lastPathComponent, "test-force.mov")
+    }
 }
 
 // MARK: - Mock Classes

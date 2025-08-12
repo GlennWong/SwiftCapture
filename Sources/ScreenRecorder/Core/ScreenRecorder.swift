@@ -376,7 +376,7 @@ extension ScreenRecorder {
         
         do {
             // Convert legacy parameters to new configuration
-            let outputURL = try recorder.outputManager.generateOutputURL(from: outputPath, format: format)
+            let outputURL = try recorder.outputManager.generateOutputURL(from: outputPath, format: format, overwrite: false)
             
             // For legacy compatibility, assume second screen (index 2) if available
             let screens = try recorder.displayManager.getAllScreens()

@@ -62,13 +62,14 @@ class ParameterValidator {
     /// - Parameters:
     ///   - path: Output file path (optional)
     ///   - format: Output format for default naming
+    ///   - overwrite: Whether to overwrite existing files without prompting
     /// - Returns: URL for output file with conflict resolution
     /// - Throws: ValidationError if invalid
-    func validateOutputPath(_ path: String?, format: OutputFormat = .mov) throws -> URL {
+    func validateOutputPath(_ path: String?, format: OutputFormat = .mov, overwrite: Bool = false) throws -> URL {
         let outputManager = OutputManager()
         
         do {
-            return try outputManager.generateOutputURL(from: path, format: format)
+            return try outputManager.generateOutputURL(from: path, format: format, overwrite: overwrite)
         } catch let error as OutputManager.OutputError {
             // Convert OutputManager errors to ValidationError
             switch error {

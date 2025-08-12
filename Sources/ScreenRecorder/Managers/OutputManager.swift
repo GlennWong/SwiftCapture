@@ -29,8 +29,9 @@ class OutputManager {
     /// Generate output URL from path or create default timestamp-based name
     /// - Parameter path: Optional custom output path
     /// - Parameter format: Output format for file extension
+    /// - Parameter overwrite: Whether to overwrite existing files without prompting
     /// - Returns: URL for output file with conflict resolution
-    func generateOutputURL(from path: String?, format: OutputFormat) throws -> URL {
+    func generateOutputURL(from path: String?, format: OutputFormat, overwrite: Bool = false) throws -> URL {
         let baseURL: URL
         
         if let customPath = path, !customPath.isEmpty {
@@ -47,16 +48,22 @@ class OutputManager {
         }
         
         // Handle file conflicts
-        return try resolveFileConflict(for: baseURL)
+        return try resolveFileConflict(for: baseURL, overwrite: overwrite)
     }
     
     /// Resolve file conflicts with user confirmation or auto-numbering
     /// - Parameter url: Original URL that may conflict
+    /// - Parameter overwrite: Whether to overwrite existing files without prompting
     /// - Returns: URL that doesn't conflict with existing files
     /// - Throws: OutputError if user cancels or resolution fails
-    private func resolveFileConflict(for url: URL) throws -> URL {
+    private func resolveFileConflict(for url: URL, overwrite: Bool) throws -> URL {
         // If file doesn't exist, return original URL
         if !FileManager.default.fileExists(atPath: url.path) {
+            return url
+        }
+        
+        // If overwrite flag is set, return original URL (will be overwritten)
+        if overwrite {
             return url
         }
         

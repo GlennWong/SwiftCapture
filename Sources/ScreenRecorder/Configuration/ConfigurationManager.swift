@@ -70,7 +70,7 @@ class ConfigurationManager {
         try validator.validateCountdown(command.countdown)
         
         // Create and validate output URL with intelligent naming and conflict resolution
-        let outputURL = try validator.validateOutputPath(command.output, format: outputFormat)
+        let outputURL = try validator.validateOutputPath(command.output, format: outputFormat, overwrite: command.force)
         try validator.checkDiskSpace(for: outputURL)
         
         // Create audio settings
