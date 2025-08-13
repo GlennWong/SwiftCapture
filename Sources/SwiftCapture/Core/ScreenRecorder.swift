@@ -49,9 +49,11 @@ class ScreenRecorder {
         
         // Setup graceful shutdown handling
         var captureStream: SCStream?
+        var isRecordingComplete = false
+        
         SignalHandler.shared.setupForRecording(progressIndicator: progressIndicator) {
             // Graceful shutdown callback
-            if let stream = captureStream {
+            if let stream = captureStream, !isRecordingComplete {
                 do {
                     try await self.captureController.stopCapture(stream)
                 } catch {
@@ -80,6 +82,9 @@ class ScreenRecorder {
             
             // Stop capture
             progressIndicator.updateProgress(message: "Stopping recording...")
+            
+            // Mark recording as complete to prevent signal handler interference
+            isRecordingComplete = true
             
             // Stop the capture stream first
             try await captureController.stopCapture(captureStream!)
@@ -128,9 +133,10 @@ class ScreenRecorder {
             // Handle errors and cleanup
             progressIndicator.stopProgressWithError(error)
             
-            // Try to stop capture if it was started
-            if let stream = captureStream {
+            // Try to stop capture if it was started and not already complete
+            if let stream = captureStream, !isRecordingComplete {
                 do {
+                    isRecordingComplete = true
                     try await captureController.stopCapture(stream)
                 } catch {
                     print("⚠️ Error stopping capture during cleanup: \(error.localizedDescription)")

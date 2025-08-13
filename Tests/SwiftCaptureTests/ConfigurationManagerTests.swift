@@ -126,8 +126,8 @@ final class ConfigurationManagerTests: XCTestCase {
         
         XCTAssertEqual(updatedConfig.targetScreen?.index, 1)
         XCTAssertEqual(updatedConfig.targetScreen?.name, "Test Display")
-        XCTAssertEqual(updatedConfig.videoSettings.resolution.width, 2560)
-        XCTAssertEqual(updatedConfig.videoSettings.resolution.height, 1440)
+        XCTAssertEqual(updatedConfig.videoSettings.resolution.width, 5120)
+        XCTAssertEqual(updatedConfig.videoSettings.resolution.height, 2880)
     }
     
     func testUpdateConfiguration_WithApplication_ShouldUpdateCorrectly() {

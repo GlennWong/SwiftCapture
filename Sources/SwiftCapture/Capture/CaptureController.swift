@@ -10,6 +10,8 @@ import CoreGraphics
 class CaptureController {
     
     private var currentDelegate: CaptureDelegate?
+    private var currentStream: SCStream?
+    private var isStreamStopped = false
     
     /// Error types for capture operations
     enum CaptureError: LocalizedError {
@@ -164,6 +166,10 @@ class CaptureController {
         // Create stream
         let stream = SCStream(filter: filter, configuration: streamConfig, delegate: nil)
         
+        // Store stream reference and reset stopped flag
+        self.currentStream = stream
+        self.isStreamStopped = false
+        
         // Add stream outputs
         let videoQueue = DispatchQueue(label: "videoQueue", qos: .userInitiated)
         let audioQueue = DispatchQueue(label: "audioQueue", qos: .userInitiated)
@@ -200,17 +206,34 @@ class CaptureController {
     /// - Parameter stream: SCStream to stop
     /// - Throws: CaptureError if stop fails
     func stopCapture(_ stream: SCStream) async throws {
+        // Check if this stream has already been stopped
+        guard !isStreamStopped else {
+            print("ℹ️ Stream stop already in progress or completed, skipping...")
+            return
+        }
+        
+        // Mark as stopped to prevent concurrent stop attempts
+        isStreamStopped = true
+        
         // First tell the delegate to stop processing new frames
         currentDelegate?.stopCapture()
         
         do {
             try await stream.stopCapture()
         } catch {
-            throw CaptureError.captureStopFailed(error)
+            // Check if the error is about stopping an already stopped stream
+            let nsError = error as NSError
+            if nsError.domain == "com.apple.ScreenCaptureKit.SCStreamErrorDomain" && nsError.code == -3808 {
+                // Stream is already stopped, this is not an error in our context
+                print("ℹ️ Stream was already stopped, continuing cleanup...")
+            } else {
+                throw CaptureError.captureStopFailed(error)
+            }
         }
         
-        // Clear delegate reference
+        // Clear references
         currentDelegate = nil
+        currentStream = nil
     }
     
     /// Create ScreenCaptureKit stream configuration from recording configuration
