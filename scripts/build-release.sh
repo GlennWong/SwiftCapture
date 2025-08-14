@@ -10,7 +10,7 @@ PRODUCT_NAME="SwiftCapture"
 BINARY_NAME="scap"
 BUILD_DIR=".build"
 RELEASE_DIR="release"
-VERSION="2.0.0"
+VERSION="2.1.0"
 
 # Colors for output
 RED='\033[0;31m'
