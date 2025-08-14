@@ -103,8 +103,16 @@ class ApplicationManager {
         for app in runningApps {
             // Skip system processes and apps without a bundle identifier
             guard let bundleId = app.bundleIdentifier,
-                  app.activationPolicy == .regular,
-                  !bundleId.hasPrefix("com.apple.") || bundleId.contains("Safari") || bundleId.contains("Finder") else {
+                  app.activationPolicy == .regular else {
+                continue
+            }
+            
+            // Allow specific Apple apps that users might want to record
+            let allowedAppleApps = ["safari", "finder", "preview", "photos", "music", "tv", "books", "notes", "mail", "calendar", "contacts", "reminders", "facetime", "messages"]
+            let isAllowedAppleApp = allowedAppleApps.contains { bundleId.lowercased().contains($0) }
+            
+            // Skip other Apple system apps unless specifically allowed
+            if bundleId.hasPrefix("com.apple.") && !isAllowedAppleApp {
                 continue
             }
             
