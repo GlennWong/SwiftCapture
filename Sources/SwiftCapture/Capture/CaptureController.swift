@@ -5,7 +5,7 @@ import AppKit
 import CoreGraphics
 
 /// Controls the actual screen capture process using ScreenCaptureKit
-/// Extracted from LegacyScreenRecorder to provide modular recording functionality
+/// Provides modular recording functionality with proper error handling
 @available(macOS 12.3, *)
 class CaptureController {
     

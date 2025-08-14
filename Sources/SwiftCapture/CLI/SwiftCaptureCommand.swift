@@ -185,8 +185,8 @@ struct SwiftCaptureCommand: AsyncParsableCommand {
                 let displayManager = DisplayManager()
                 let recordingArea = try RecordingArea.parse(from: areaString)
                 try displayManager.validateArea(recordingArea, for: screen)
-            } catch let error as ScreenRecorderError {
-                // Convert ScreenRecorderError to ValidationError for consistent CLI output
+            } catch let error as SwiftCaptureError {
+                // Convert SwiftCaptureError to ValidationError for consistent CLI output
                 throw ValidationError(error.localizedDescription)
             } catch let error as ValidationError {
                 // Re-throw ValidationError as-is
@@ -380,10 +380,9 @@ struct SwiftCaptureCommand: AsyncParsableCommand {
                 try await showCountdown()
             }
             
-            // For now, call the existing recording function with converted parameters
-            // This will be refactored when we implement the new architecture
+            // Execute recording with the new modular architecture
             if #available(macOS 12.3, *) {
-                await callLegacyRecording()
+                try await executeRecording()
             }
             
         } catch let error as ComprehensiveError {
@@ -392,7 +391,7 @@ struct SwiftCaptureCommand: AsyncParsableCommand {
             throw ExitCode(error.exitCode)
             
         } catch let error as ValidationError {
-            // Handle legacy validation errors with formatted output
+            // Handle validation errors with formatted output
             print("❌ \(error.message)")
             if let suggestion = error.suggestion {
                 print("💡 \(suggestion)")
@@ -584,7 +583,7 @@ struct SwiftCaptureCommand: AsyncParsableCommand {
     }
     
     @available(macOS 12.3, *)
-    private func callLegacyRecording() async {
+    private func executeRecording() async throws {
         do {
             // Create configuration using ConfigurationManager (handles preset loading)
             let configManager = try ConfigurationManager()
@@ -608,36 +607,8 @@ struct SwiftCaptureCommand: AsyncParsableCommand {
         } catch {
             print("❌ Recording error: \(error.localizedDescription)")
             
-            // 🔧 修复：检查是否是应用录制模式
-            if let appName = app {
-                print("❌ Application recording failed for '\(appName)'")
-                print("💡 Possible solutions:")
-                print("   1. Make sure '\(appName)' is running and has visible windows")
-                print("   2. The app has been automatically brought to front - please wait a moment")
-                print("   3. Grant Screen Recording permissions in System Preferences")
-                print("   4. Use exact application name from --app-list")
-                print("   5. If recording from fullscreen Terminal, the app should now be visible")
-                return
-            }
-            
-            // Fallback to legacy recording only for screen recording
-            print("⚠️ Falling back to legacy screen recording...")
-            let outputPath = generateOutputPath()
-            let fullScreen = (area == nil)
-            
-            let videoQuality = VideoQuality(rawValue: quality.lowercased()) ?? .medium
-            let outputFormat = OutputFormat(rawValue: format.lowercased()) ?? .mov
-            await LegacyScreenRecorder.recordWithArea(
-                durationMs: duration,
-                outputPath: outputPath,
-                fullScreen: fullScreen,
-                areaString: area,
-                screenIndex: screen,
-                fps: fps,
-                quality: videoQuality,
-                format: outputFormat,
-                showCursor: showCursor
-            )
+            // Re-throw the error for proper error handling
+            throw error
         }
     }
     

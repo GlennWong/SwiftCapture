@@ -83,8 +83,8 @@ final class MockDisplayManagerTests: XCTestCase {
         mockDisplayManager.mockScreens = [screen]
         
         XCTAssertThrowsError(try mockDisplayManager.getScreen(at: 2)) { error in
-            XCTAssertTrue(error is ScreenRecorderError)
-            if case .screenNotFound(let index) = error as! ScreenRecorderError {
+            XCTAssertTrue(error is SwiftCaptureError)
+            if case .screenNotFound(let index) = error as! SwiftCaptureError {
                 XCTAssertEqual(index, 2)
             } else {
                 XCTFail("Expected screenNotFound error")
@@ -111,7 +111,7 @@ final class MockDisplayManagerTests: XCTestCase {
         mockDisplayManager.mockScreens = []
         
         XCTAssertThrowsError(try mockDisplayManager.validateScreen(1)) { error in
-            XCTAssertTrue(error is ScreenRecorderError)
+            XCTAssertTrue(error is SwiftCaptureError)
         }
     }
     
@@ -161,8 +161,8 @@ final class MockDisplayManagerTests: XCTestCase {
         mockDisplayManager.shouldThrowError = true
         
         XCTAssertThrowsError(try mockDisplayManager.getAllScreens()) { error in
-            XCTAssertTrue(error is ScreenRecorderError)
-            if case .systemRequirementsNotMet = error as! ScreenRecorderError {
+            XCTAssertTrue(error is SwiftCaptureError)
+            if case .systemRequirementsNotMet = error as! SwiftCaptureError {
                 // Expected error
             } else {
                 XCTFail("Expected systemRequirementsNotMet error")
@@ -170,7 +170,7 @@ final class MockDisplayManagerTests: XCTestCase {
         }
         
         XCTAssertThrowsError(try mockDisplayManager.getScreen(at: 1)) { error in
-            XCTAssertTrue(error is ScreenRecorderError)
+            XCTAssertTrue(error is SwiftCaptureError)
         }
     }
     
@@ -207,7 +207,7 @@ final class MockDisplayManagerTests: XCTestCase {
         let validator = ParameterValidator(displayManager: mockDisplayManager)
         
         XCTAssertThrowsError(try validator.validateScreen(1)) { error in
-            XCTAssertTrue(error is ScreenRecorderError)
+            XCTAssertTrue(error is SwiftCaptureError)
         }
     }
     

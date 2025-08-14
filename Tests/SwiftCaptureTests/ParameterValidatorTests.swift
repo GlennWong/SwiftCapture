@@ -114,7 +114,7 @@ final class ParameterValidatorTests: XCTestCase {
         }
         
         XCTAssertThrowsError(try validator.validateScreen(3)) { error in
-            XCTAssertTrue(error is ScreenRecorderError)
+            XCTAssertTrue(error is SwiftCaptureError)
         }
     }
     
@@ -286,18 +286,18 @@ class MockDisplayManager: DisplayManager {
     
     override func getAllScreens() throws -> [ScreenInfo] {
         if shouldThrowError {
-            throw ScreenRecorderError.systemRequirementsNotMet
+            throw SwiftCaptureError.systemRequirementsNotMet
         }
         return mockScreens
     }
     
     override func getScreen(at index: Int) throws -> ScreenInfo {
         if shouldThrowError {
-            throw ScreenRecorderError.systemRequirementsNotMet
+            throw SwiftCaptureError.systemRequirementsNotMet
         }
         
         guard let screen = mockScreens.first(where: { $0.index == index }) else {
-            throw ScreenRecorderError.screenNotFound(index)
+            throw SwiftCaptureError.screenNotFound(index)
         }
         
         return screen

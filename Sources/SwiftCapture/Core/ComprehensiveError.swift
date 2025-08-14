@@ -131,7 +131,7 @@ enum ComprehensiveError: LocalizedError {
         case .permissionsRequired(let permission):
             return "Grant \(permission) permission in System Preferences > Security & Privacy"
         case .screenCaptureKitUnavailable:
-            return "Update to macOS 12.3 or later, or use legacy recording mode"
+            return "Update to macOS 12.3 or later for ScreenCaptureKit support"
             
         // Configuration Errors
         case .invalidDuration:

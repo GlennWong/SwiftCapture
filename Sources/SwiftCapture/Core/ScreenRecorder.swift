@@ -3,7 +3,7 @@ import ScreenCaptureKit
 @preconcurrency import AVFoundation
 
 /// Main screen recorder class that coordinates all recording components
-/// This replaces the LegacyScreenRecorder with a modular architecture
+/// Uses a modular architecture for maintainable and testable code
 @available(macOS 12.3, *)
 class ScreenRecorder {
     
@@ -353,68 +353,4 @@ class ScreenRecorder {
     }
 }
 
-// MARK: - Legacy Compatibility
 
-/// Legacy compatibility wrapper for existing code
-/// This allows gradual migration from LegacyScreenRecorder
-@available(macOS 12.3, *)
-extension ScreenRecorder {
-    
-    /// Legacy record method for backward compatibility
-    /// - Parameters:
-    ///   - durationMs: Duration in milliseconds
-    ///   - outputPath: Optional output path
-    ///   - fullScreen: Whether to record full screen
-    ///   - fps: Frame rate
-    ///   - quality: Video quality
-    ///   - format: Output format
-    ///   - showCursor: Whether to show cursor
-    static func record(
-        durationMs: Int,
-        outputPath: String?,
-        fullScreen: Bool,
-        fps: Int = 30,
-        quality: VideoQuality = .medium,
-        format: OutputFormat = .mov,
-        showCursor: Bool = false
-    ) async {
-        let recorder = ScreenRecorder()
-        
-        do {
-            // Convert legacy parameters to new configuration
-            let outputURL = try recorder.outputManager.generateOutputURL(from: outputPath, format: format, overwrite: false)
-            
-            // For legacy compatibility, assume second screen (index 2) if available
-            let screens = try recorder.displayManager.getAllScreens()
-            let targetScreen = screens.count >= 2 ? screens[1] : screens[0]
-            
-            let recordingArea: RecordingArea = fullScreen ? .fullScreen : .centered(width: Int(targetScreen.frame.height * 3 / 4), height: Int(targetScreen.frame.height))
-            
-            let config = RecordingConfiguration(
-                duration: Double(durationMs) / 1000.0,
-                outputURL: outputURL,
-                outputFormat: format,
-                recordingArea: recordingArea,
-                targetScreen: targetScreen,
-                targetApplication: nil,
-                audioSettings: .default(includeSystemAudio: true),
-                videoSettings: VideoSettings(
-                    fps: fps,
-                    quality: quality,
-                    codec: .h264,
-                    showCursor: showCursor,
-                    resolution: CGSize(
-                        width: recordingArea == .fullScreen ? targetScreen.frame.width * targetScreen.scaleFactor : targetScreen.frame.height * targetScreen.scaleFactor * 3 / 4,
-                        height: targetScreen.frame.height * targetScreen.scaleFactor
-                    )
-                ),
-                countdown: 0
-            )
-            
-            try await recorder.record(with: config)
-            
-        } catch {
-            print("❌ Recording failed: \(error.localizedDescription)")
-        }
-    }
-}

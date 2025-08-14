@@ -25,12 +25,12 @@ class DisplayManager {
     /// Gets information for a specific screen by index
     /// - Parameter index: 1-based screen index
     /// - Returns: ScreenInfo for the specified screen
-    /// - Throws: ScreenRecorderError if screen not found
+    /// - Throws: SwiftCaptureError if screen not found
     func getScreen(at index: Int) throws -> ScreenInfo {
         let screens = try getAllScreens()
         
         guard let screen = screens.first(where: { $0.index == index }) else {
-            throw ScreenRecorderError.screenNotFound(index)
+            throw SwiftCaptureError.screenNotFound(index)
         }
         
         return screen
@@ -38,7 +38,7 @@ class DisplayManager {
     
     /// Gets all available screens
     /// - Returns: Array of ScreenInfo objects
-    /// - Throws: ScreenRecorderError if screen detection fails
+    /// - Throws: SwiftCaptureError if screen detection fails
     func getAllScreens() throws -> [ScreenInfo] {
         // Get all online displays
         let maxDisplays: UInt32 = 32
@@ -47,7 +47,7 @@ class DisplayManager {
         
         let result = CGGetOnlineDisplayList(maxDisplays, &displayIDs, &displayCount)
         guard result == .success else {
-            throw ScreenRecorderError.systemRequirementsNotMet
+            throw SwiftCaptureError.systemRequirementsNotMet
         }
         
         var screens: [ScreenInfo] = []
@@ -100,7 +100,7 @@ class DisplayManager {
     
     /// Validates that a screen index exists
     /// - Parameter index: 1-based screen index to validate
-    /// - Throws: ScreenRecorderError if screen not found
+    /// - Throws: SwiftCaptureError if screen not found
     func validateScreen(_ index: Int) throws {
         _ = try getScreen(at: index)
     }
@@ -109,7 +109,7 @@ class DisplayManager {
     /// - Parameters:
     ///   - area: The recording area to validate
     ///   - screenIndex: 1-based screen index to validate against (defaults to 1 if not specified)
-    /// - Throws: ScreenRecorderError or ValidationError if validation fails
+    /// - Throws: SwiftCaptureError or ValidationError if validation fails
     func validateArea(_ area: RecordingArea, for screenIndex: Int) throws {
         let screen = try getScreen(at: screenIndex)
         try area.validate(against: screen)
@@ -120,7 +120,7 @@ class DisplayManager {
     ///   - areaString: String representation of the area (e.g., "0:0:1920:1080" or "center:800:600")
     ///   - screenIndex: 1-based screen index to validate against
     /// - Returns: Validated RecordingArea
-    /// - Throws: ValidationError or ScreenRecorderError if parsing or validation fails
+    /// - Throws: ValidationError or SwiftCaptureError if parsing or validation fails
     func parseAndValidateArea(_ areaString: String, for screenIndex: Int) throws -> RecordingArea {
         let area = try RecordingArea.parse(from: areaString)
         try validateArea(area, for: screenIndex)
@@ -132,7 +132,7 @@ class DisplayManager {
     ///   - area: The recording area specification
     ///   - screenIndex: 1-based screen index
     /// - Returns: CGRect representing the actual recording area
-    /// - Throws: ScreenRecorderError if screen not found or area is invalid
+    /// - Throws: SwiftCaptureError if screen not found or area is invalid
     func getEffectiveRecordingArea(_ area: RecordingArea, for screenIndex: Int) throws -> CGRect {
         let screen = try getScreen(at: screenIndex)
         try area.validate(against: screen)
@@ -178,7 +178,7 @@ class DisplayManager {
 }
 
 /// Screen recorder specific errors
-enum ScreenRecorderError: LocalizedError {
+enum SwiftCaptureError: LocalizedError {
     case screenNotFound(Int)
     case systemRequirementsNotMet
     case invalidArea(String)
