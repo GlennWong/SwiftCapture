@@ -302,6 +302,12 @@ class CaptureController {
         }
         
         print("📹 Capture Configuration:")
+        print("   Recording Mode: \(config.recordingMode)")
+        if let screen = config.targetScreen {
+            print("   Target Screen: \(screen.index) (\(screen.name))")
+            print("   Screen Frame: \(screen.frame)")
+            print("   Scale Factor: \(screen.scaleFactor)x")
+        }
         print("   Source Rect: \(sourceRect)")
         print("   Output Size: \(Int(outputSize.width)) × \(Int(outputSize.height))")
         print("   Frame Rate: \(config.videoSettings.fps) fps")
@@ -441,27 +447,24 @@ class CaptureController {
         let scaleFactor = nsScreen.backingScaleFactor
         let logicalFrame = nsScreen.frame
         
-        // Calculate recording area (now in pixel coordinates)
-        let recordingRect = config.recordingArea.toCGRect(for: ScreenInfo(
+        // 🔧 修复：使用屏幕本地坐标系计算录制区域
+        let screenInfo = ScreenInfo(
             index: 1,
             displayID: targetDisplay.displayID,
             frame: logicalFrame,
             name: "Display",
             isPrimary: true,
             scaleFactor: scaleFactor
-        ))
+        )
         
-        // Recording rect is already in pixel coordinates, no need to multiply by scale factor
+        // 获取录制区域（像素坐标）
+        let recordingRect = config.recordingArea.toCGRect(for: screenInfo)
         let actualWidth = Int(recordingRect.width)
         let actualHeight = Int(recordingRect.height)
         
-        // Convert pixel coordinates back to logical coordinates for ScreenCaptureKit
-        let logicalSourceRect = CGRect(
-            x: recordingRect.origin.x / scaleFactor,
-            y: recordingRect.origin.y / scaleFactor,
-            width: recordingRect.width / scaleFactor,
-            height: recordingRect.height / scaleFactor
-        )
+        // 🔧 关键修复：对于ScreenCaptureKit，使用屏幕本地逻辑坐标
+        // 不需要考虑屏幕在全局坐标系中的偏移
+        let logicalSourceRect = config.recordingArea.toLogicalRect(for: screenInfo)
         
         return (
             sourceRect: logicalSourceRect,

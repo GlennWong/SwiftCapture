@@ -21,10 +21,11 @@ enum RecordingArea: Equatable {
         
         switch self {
         case .fullScreen:
-            // Return the full screen in pixel coordinates
+            // 🔧 修复：全屏录制使用屏幕本地坐标系，不包含全局偏移
+            // 对于全屏录制，应该从(0,0)开始，使用屏幕的完整尺寸
             return CGRect(
-                x: screenFrame.origin.x * scaleFactor,
-                y: screenFrame.origin.y * scaleFactor,
+                x: 0,
+                y: 0,
                 width: screenFrame.width * scaleFactor,
                 height: screenFrame.height * scaleFactor
             )
@@ -52,8 +53,14 @@ enum RecordingArea: Equatable {
         
         switch self {
         case .fullScreen:
-            // Return the full screen in logical coordinates
-            return screenFrame
+            // 🔧 修复：全屏录制使用屏幕本地坐标系
+            // ScreenCaptureKit需要相对于目标屏幕的本地坐标
+            return CGRect(
+                x: 0,
+                y: 0,
+                width: screenFrame.width,
+                height: screenFrame.height
+            )
             
         case .customRect(let rect):
             // Convert pixel coordinates to logical coordinates
@@ -91,8 +98,8 @@ enum RecordingArea: Equatable {
             isWithinBounds = true
             
         case .customRect(let rect):
-            // For custom rectangles, check if the area fits within the screen's pixel bounds
-            // All coordinates are now treated as pixel coordinates
+            // 🔧 修复：自定义矩形验证使用屏幕本地坐标系
+            // 自定义矩形坐标应该相对于目标屏幕，而不是全局坐标系
             isWithinBounds = rect.origin.x >= 0 &&
                            rect.origin.y >= 0 &&
                            rect.maxX <= pixelWidth &&
