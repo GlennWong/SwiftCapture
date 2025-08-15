@@ -10,7 +10,7 @@ PRODUCT_NAME="SwiftCapture"
 BINARY_NAME="scap"
 BUILD_DIR=".build"
 RELEASE_DIR="release"
-VERSION="2.1.1"
+VERSION="2.1.4"
 
 # Colors for output
 RED='\033[0;31m'
@@ -26,7 +26,7 @@ echo -e "${YELLOW}📋 Checking system requirements...${NC}"
 
 # Check macOS version
 MACOS_VERSION=$(sw_vers -productVersion)
-REQUIRED_VERSION="12.3"
+REQUIRED_VERSION="2.1.4"
 
 if [[ "$(printf '%s\n' "$REQUIRED_VERSION" "$MACOS_VERSION" | sort -V | head -n1)" != "$REQUIRED_VERSION" ]]; then
     echo -e "${RED}❌ Error: macOS $REQUIRED_VERSION or later required. Current: $MACOS_VERSION${NC}"
