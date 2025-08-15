@@ -7,9 +7,15 @@ on:
 jobs:
   update-homebrew:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
     steps:
       - name: Checkout main repo
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
         
       - name: Extract version from tag
         id: version
@@ -39,10 +45,8 @@ jobs:
           git diff --staged --quiet || git commit -m "Auto-update version to ${{ steps.version.outputs.version }}"
           
       - name: Push version updates
-        uses: ad-m/github-push-action@master
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          branch: main
+        run: |
+          git push origin main
           
       - name: Calculate SHA256
         id: sha
