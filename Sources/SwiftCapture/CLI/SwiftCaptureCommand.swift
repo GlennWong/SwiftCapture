@@ -11,7 +11,7 @@ struct SwiftCaptureCommand: AsyncParsableCommand {
         commandName: "scap",
         abstract: "Professional screen recording tool for macOS using ScreenCaptureKit",
         discussion: HelpFormatter.usageExamples,
-        version: "2.1.6",
+        version: "2.1.7",
         helpNames: [.short, .long, .customLong("help")]
     )
     
