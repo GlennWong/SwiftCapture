@@ -1,0 +1,79 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  update-homebrew:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main repo
+        uses: actions/checkout@v4
+        
+      - name: Extract version from tag
+        id: version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          
+      - name: Update version in source files
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          
+          # Update release-config.json
+          sed -i "s/\"version\": \".*\"/\"version\": \"$VERSION\"/" release-config.json
+          
+          # Update SwiftCaptureCommand.swift
+          sed -i "s/version: \".*\"/version: \"$VERSION\"/" Sources/SwiftCapture/CLI/SwiftCaptureCommand.swift
+          
+          # Update build-release.sh
+          sed -i "s/VERSION=\".*\"/VERSION=\"$VERSION\"/" scripts/build-release.sh
+          
+      - name: Commit version updates
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add release-config.json Sources/SwiftCapture/CLI/SwiftCaptureCommand.swift scripts/build-release.sh
+          git diff --staged --quiet || git commit -m "Auto-update version to ${{ steps.version.outputs.version }}"
+          
+      - name: Push version updates
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: main
+          
+      - name: Calculate SHA256
+        id: sha
+        run: |
+          URL="https://github.com/${{ github.repository }}/archive/${{ steps.version.outputs.tag }}.tar.gz"
+          SHA256=$(curl -sL "$URL" | sha256sum | cut -d' ' -f1)
+          echo "sha256=$SHA256" >> $GITHUB_OUTPUT
+          
+      - name: Checkout homebrew tap
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/homebrew-swiftcapture
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          path: homebrew-tap
+          
+      - name: Update Homebrew formula
+        run: |
+          cd homebrew-tap
+          VERSION="${{ steps.version.outputs.version }}"
+          TAG="${{ steps.version.outputs.tag }}"
+          SHA256="${{ steps.sha.outputs.sha256 }}"
+          
+          # Update formula
+          sed -i "s|url \".*\"|url \"https://github.com/${{ github.repository }}/archive/$TAG.tar.gz\"|" Formula/swiftcapture.rb
+          sed -i "s/sha256 \".*\"/sha256 \"$SHA256\"/" Formula/swiftcapture.rb
+          
+      - name: Commit and push formula update
+        run: |
+          cd homebrew-tap
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add Formula/swiftcapture.rb
+          git commit -m "Release ${{ steps.version.outputs.tag }}: Update formula"
+          git push
