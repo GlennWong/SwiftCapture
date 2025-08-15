@@ -254,6 +254,7 @@ final class PresetStorageTests: XCTestCase {
             audioSettings: AudioSettings(
                 includeMicrophone: false,
                 includeSystemAudio: true,
+                forceSystemAudio: false,
                 quality: .medium,
                 sampleRate: 44100,
                 bitRate: 128000,

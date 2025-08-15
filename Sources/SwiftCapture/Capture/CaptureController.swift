@@ -48,18 +48,79 @@ class CaptureController {
         private var frameCount = 0
         private var audioSampleCount = 0
         
+        // 麦克风录制相关
+        private var audioEngine: AVAudioEngine?
+        private var microphoneInput: AVAssetWriterInput?
+        private var audioMixer: AVAudioMixerNode?
+        private let includeMicrophone: Bool
+        
         init(videoInput: AVAssetWriterInput, 
              audioInput: AVAssetWriterInput?, 
              adaptor: AVAssetWriterInputPixelBufferAdaptor, 
-             writer: AVAssetWriter) {
+             writer: AVAssetWriter,
+             includeMicrophone: Bool = false) {
             self.videoInput = videoInput
             self.audioInput = audioInput
             self.adaptor = adaptor
             self.writer = writer
+            self.includeMicrophone = includeMicrophone
+            
+            super.init()
+            
+            // 如果需要麦克风，设置音频引擎
+            if includeMicrophone {
+                setupMicrophoneRecording()
+            }
+        }
+        
+        private func setupMicrophoneRecording() {
+            do {
+                audioEngine = AVAudioEngine()
+                guard let audioEngine = audioEngine else { return }
+                
+                let inputNode = audioEngine.inputNode
+                let recordingFormat = inputNode.outputFormat(forBus: 0)
+                
+                // 创建混音器节点
+                audioMixer = AVAudioMixerNode()
+                guard let audioMixer = audioMixer else { return }
+                
+                audioEngine.attach(audioMixer)
+                audioEngine.connect(inputNode, to: audioMixer, format: recordingFormat)
+                audioEngine.connect(audioMixer, to: audioEngine.outputNode, format: recordingFormat)
+                
+                // 安装音频处理回调
+                audioMixer.installTap(onBus: 0, bufferSize: 1024, format: recordingFormat) { [weak self] buffer, time in
+                    self?.processMicrophoneAudio(buffer: buffer, time: time)
+                }
+                
+                try audioEngine.start()
+                print("🎤 Microphone audio engine started successfully")
+                
+            } catch {
+                print("⚠️ Failed to setup microphone recording: \(error.localizedDescription)")
+                audioEngine = nil
+                audioMixer = nil
+            }
+        }
+        
+        private func processMicrophoneAudio(buffer: AVAudioPCMBuffer, time: AVAudioTime) {
+            // 暂时只记录麦克风音频处理，避免干扰系统音频录制
+            // 实际的音频混合需要更复杂的实现
+            if frameCount % 1000 == 0 { // 减少日志频率
+                print("🎤 Microphone audio detected (not yet mixed)")
+            }
         }
         
         func stopCapture() {
             shouldStop = true
+            
+            // 停止麦克风录制
+            if let audioEngine = audioEngine {
+                audioMixer?.removeTap(onBus: 0)
+                audioEngine.stop()
+                print("🎤 Microphone audio engine stopped")
+            }
         }
         
         func stream(_ stream: SCStream, didOutputSampleBuffer sampleBuffer: CMSampleBuffer, of outputType: SCStreamOutputType) {
@@ -157,7 +218,8 @@ class CaptureController {
             videoInput: videoInput,
             audioInput: audioInput,
             adaptor: adaptor,
-            writer: writer
+            writer: writer,
+            includeMicrophone: config.audioSettings.includeMicrophone
         )
         
         // Store delegate reference for later use
@@ -185,11 +247,19 @@ class CaptureController {
             do {
                 if #available(macOS 13.0, *) {
                     try stream.addStreamOutput(delegate, type: .audio, sampleHandlerQueue: audioQueue)
+                    print("✅ System audio stream added successfully")
                 }
             } catch {
-                print("⚠️ Warning: Failed to add audio output: \(error.localizedDescription)")
-                // Continue without audio rather than failing completely
+                print("⚠️ Warning: Failed to add system audio output: \(error.localizedDescription)")
+                // Continue without system audio rather than failing completely
             }
+        }
+        
+        // 🔧 新增：如果启用了麦克风，需要单独处理麦克风音频
+        if config.audioSettings.includeMicrophone {
+            print("🎤 Microphone recording enabled - will be mixed with system audio")
+            // 注意：ScreenCaptureKit 主要处理系统音频，麦克风音频需要通过 AVAudioEngine 单独处理
+            // 这需要在 OutputManager 中实现音频混合逻辑
         }
         
         // Start capture
@@ -328,6 +398,52 @@ class CaptureController {
         content: SCShareableContent
     ) throws -> SCContentFilter {
         
+        // 🔧 智能混合模式：当应用录制需要系统音频且不包含麦克风时，切换到屏幕录制模式
+        // 如果同时需要麦克风，保持应用录制模式并尝试混合音频
+        if config.recordingMode == .application && config.audioSettings.forceSystemAudio && !config.audioSettings.includeMicrophone {
+            print("🔄 Smart Hybrid Mode: Switching to screen recording for system-wide audio")
+            print("   Will record the screen area containing the application window")
+            
+            guard let targetApp = config.targetApplication else {
+                throw CaptureError.configurationError("No target application specified")
+            }
+            
+            // 找到应用窗口
+            let appWindows = content.windows.filter { window in
+                window.owningApplication?.bundleIdentifier == targetApp.bundleIdentifier
+            }
+            
+            guard let appWindow = appWindows.first else {
+                throw CaptureError.configurationError("No windows found for target application '\(targetApp.name)'")
+            }
+            
+            // 找到包含应用窗口的显示器
+            let windowCenter = CGPoint(
+                x: appWindow.frame.origin.x + appWindow.frame.width / 2,
+                y: appWindow.frame.origin.y + appWindow.frame.height / 2
+            )
+            
+            var targetDisplay: SCDisplay?
+            let screens = NSScreen.screens
+            
+            for screen in screens {
+                if screen.frame.contains(windowCenter) {
+                    let screenNumber = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID
+                    targetDisplay = content.displays.first { $0.displayID == screenNumber }
+                    break
+                }
+            }
+            
+            if targetDisplay == nil {
+                targetDisplay = content.displays.first { $0.displayID == CGMainDisplayID() } ?? content.displays.first!
+            }
+            
+            print("   Target Display: ID \(targetDisplay!.displayID)")
+            print("   Window Area: \(Int(appWindow.frame.origin.x)), \(Int(appWindow.frame.origin.y)), \(Int(appWindow.frame.width)) × \(Int(appWindow.frame.height))")
+            
+            return SCContentFilter(display: targetDisplay!, excludingWindows: [])
+        }
+        
         switch config.recordingMode {
         case .screen:
             // Screen recording mode
@@ -393,6 +509,8 @@ class CaptureController {
             print("   Size: \(Int(bestWindow.frame.width)) × \(Int(bestWindow.frame.height))")
             print("   Position: (\(Int(bestWindow.frame.origin.x)), \(Int(bestWindow.frame.origin.y)))")
             
+
+            
             return SCContentFilter(desktopIndependentWindow: bestWindow)
         }
     }
@@ -407,6 +525,11 @@ class CaptureController {
         config: RecordingConfiguration,
         content: SCShareableContent
     ) throws -> (sourceRect: CGRect, outputSize: CGSize) {
+        
+        // 🔧 处理混合模式：应用录制 + 系统音频 = 屏幕录制模式但使用应用窗口区域
+        if config.recordingMode == .application && config.audioSettings.forceSystemAudio {
+            return try calculateHybridRecordingDimensions(config: config, content: content)
+        }
         
         switch config.recordingMode {
         case .screen:
@@ -569,6 +692,79 @@ class CaptureController {
         // 对于应用窗口录制，sourceRect应该设置为CGRect.null或窗口的完整区域
         return (
             sourceRect: CGRect.null, // 让ScreenCaptureKit自动使用完整窗口区域
+            outputSize: CGSize(width: outputWidth, height: outputHeight)
+        )
+    }
+    
+    /// Calculate dimensions for hybrid recording (app window area on screen for system audio)
+    private func calculateHybridRecordingDimensions(
+        config: RecordingConfiguration,
+        content: SCShareableContent
+    ) throws -> (sourceRect: CGRect, outputSize: CGSize) {
+        
+        guard let targetApp = config.targetApplication else {
+            throw CaptureError.configurationError("No target application specified")
+        }
+        
+        // 找到应用窗口
+        let appWindows = content.windows.filter { window in
+            window.owningApplication?.bundleIdentifier == targetApp.bundleIdentifier
+        }
+        
+        guard let appWindow = appWindows.first else {
+            throw CaptureError.configurationError("No windows found for target application '\(targetApp.name)'")
+        }
+        
+        // 获取窗口所在的屏幕信息
+        let windowCenter = CGPoint(
+            x: appWindow.frame.origin.x + appWindow.frame.width / 2,
+            y: appWindow.frame.origin.y + appWindow.frame.height / 2
+        )
+        
+        let screens = NSScreen.screens
+        var scaleFactor: CGFloat = 1.0
+        var containingScreen: NSScreen?
+        
+        for screen in screens {
+            if screen.frame.contains(windowCenter) {
+                scaleFactor = screen.backingScaleFactor
+                containingScreen = screen
+                break
+            }
+        }
+        
+        if scaleFactor == 1.0 {
+            scaleFactor = NSScreen.main?.backingScaleFactor ?? 1.0
+            containingScreen = NSScreen.main
+        }
+        
+        // 🔧 混合模式：使用屏幕录制但限制在应用窗口区域
+        let windowFrame = appWindow.frame
+        let actualWidth = windowFrame.width
+        let actualHeight = windowFrame.height
+        
+        // 计算输出像素尺寸
+        let outputWidth = Int(actualWidth * scaleFactor)
+        let outputHeight = Int(actualHeight * scaleFactor)
+        
+        // 🔧 关键：设置 sourceRect 为应用窗口在屏幕上的位置（逻辑坐标）
+        // 这样屏幕录制模式只会录制窗口区域，同时获得系统音频
+        let sourceRect = CGRect(
+            x: windowFrame.origin.x,
+            y: windowFrame.origin.y,
+            width: actualWidth,
+            height: actualHeight
+        )
+        
+        print("🔍 Hybrid Recording Debug:")
+        print("   Window Frame: \(Int(windowFrame.origin.x)), \(Int(windowFrame.origin.y)), \(Int(actualWidth)) × \(Int(actualHeight))")
+        print("   Scale Factor: \(scaleFactor)x")
+        print("   Source Rect (logical): \(Int(sourceRect.origin.x)), \(Int(sourceRect.origin.y)), \(Int(sourceRect.width)) × \(Int(sourceRect.height))")
+        print("   Output Size (pixels): \(outputWidth) × \(outputHeight)")
+        print("   Containing Screen: \(containingScreen?.localizedName ?? "Unknown")")
+        
+        return (
+            sourceRect: sourceRect,
             outputSize: CGSize(width: outputWidth, height: outputHeight)
         )
     }

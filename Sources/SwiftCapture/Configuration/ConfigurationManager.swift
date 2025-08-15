@@ -66,7 +66,9 @@ class ConfigurationManager {
         
         try validator.validateFPS(command.fps)
         let videoQuality = try validator.validateQuality(command.quality)
-        let outputFormat = try validator.validateFormat(command.format)
+        
+        // Detect output format from file extension
+        let outputFormat = command.detectOutputFormat()
         try validator.validateCountdown(command.countdown)
         
         // Create and validate output URL with intelligent naming and conflict resolution
@@ -77,6 +79,7 @@ class ConfigurationManager {
         let audioSettings = AudioSettings(
             includeMicrophone: command.enableMicrophone,
             includeSystemAudio: true, // Always include system audio
+            forceSystemAudio: command.systemAudioOnly, // Force system-wide audio if requested
             quality: baseConfig?.audioSettings.quality ?? .medium,
             sampleRate: baseConfig?.audioSettings.sampleRate ?? AudioQuality.medium.sampleRate,
             bitRate: baseConfig?.audioSettings.bitRate ?? AudioQuality.medium.bitRate,

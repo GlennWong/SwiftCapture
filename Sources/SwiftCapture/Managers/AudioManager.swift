@@ -84,6 +84,7 @@ class AudioManager {
         let audioSettings = AudioSettings(
             includeMicrophone: config.audioSettings.includeMicrophone,
             includeSystemAudio: config.audioSettings.includeSystemAudio,
+            forceSystemAudio: config.audioSettings.forceSystemAudio,
             quality: audioQuality,
             sampleRate: audioQuality.sampleRate,
             bitRate: audioQuality.bitRate,
@@ -175,12 +176,14 @@ class AudioManager {
     /// - Parameters:
     ///   - includeMicrophone: Whether to include microphone audio
     ///   - includeSystemAudio: Whether to include system audio
+    ///   - forceSystemAudio: Force system-wide audio recording
     ///   - qualityString: Audio quality string
     /// - Returns: Validated AudioSettings
     /// - Throws: AudioError if validation fails
     func createAudioSettings(
         includeMicrophone: Bool,
         includeSystemAudio: Bool,
+        forceSystemAudio: Bool = false,
         qualityString: String
     ) throws -> AudioSettings {
         // Validate quality
@@ -194,6 +197,7 @@ class AudioManager {
         return AudioSettings(
             includeMicrophone: includeMicrophone,
             includeSystemAudio: includeSystemAudio,
+            forceSystemAudio: forceSystemAudio,
             quality: quality,
             sampleRate: quality.sampleRate,
             bitRate: quality.bitRate,
@@ -340,12 +344,14 @@ extension AudioManager {
     /// Create default audio settings for common use cases
     /// - Parameters:
     ///   - includeMicrophone: Whether to include microphone
+    ///   - forceSystemAudio: Force system-wide audio recording
     ///   - quality: Audio quality preset
     /// - Returns: AudioSettings with default values
-    static func defaultSettings(includeMicrophone: Bool = false, quality: AudioQuality = .medium) -> AudioSettings {
+    static func defaultSettings(includeMicrophone: Bool = false, forceSystemAudio: Bool = false, quality: AudioQuality = .medium) -> AudioSettings {
         return AudioSettings.default(
             includeMicrophone: includeMicrophone,
             includeSystemAudio: true,
+            forceSystemAudio: forceSystemAudio,
             quality: quality
         )
     }

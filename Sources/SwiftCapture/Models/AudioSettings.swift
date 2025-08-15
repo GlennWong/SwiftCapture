@@ -34,6 +34,9 @@ struct AudioSettings {
     /// Whether to include system audio
     let includeSystemAudio: Bool
     
+    /// Force system-wide audio recording (for app recording)
+    let forceSystemAudio: Bool
+    
     /// Audio quality preset
     let quality: AudioQuality
     
@@ -62,14 +65,17 @@ extension AudioSettings {
     /// - Parameters:
     ///   - includeMicrophone: Whether to include microphone (default: false)
     ///   - includeSystemAudio: Whether to include system audio (default: true)
+    ///   - forceSystemAudio: Force system-wide audio recording (default: false)
     ///   - quality: Audio quality (default: medium)
     /// - Returns: AudioSettings instance
     static func `default`(includeMicrophone: Bool = false,
                          includeSystemAudio: Bool = true,
+                         forceSystemAudio: Bool = false,
                          quality: AudioQuality = .medium) -> AudioSettings {
         return AudioSettings(
             includeMicrophone: includeMicrophone,
             includeSystemAudio: includeSystemAudio,
+            forceSystemAudio: forceSystemAudio,
             quality: quality,
             sampleRate: quality.sampleRate,
             bitRate: quality.bitRate,

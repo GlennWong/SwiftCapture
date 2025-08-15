@@ -114,6 +114,7 @@ struct RecordingPreset: Codable {
         let audioSettings = AudioSettings(
             includeMicrophone: enableMicrophone,
             includeSystemAudio: true, // Always include system audio
+            forceSystemAudio: false, // Default to false for presets
             quality: audioQualityEnum,
             sampleRate: audioQualityEnum.sampleRate,
             bitRate: audioQualityEnum.bitRate,

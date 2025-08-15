@@ -20,7 +20,19 @@ struct SwiftCaptureCommand: AsyncParsableCommand {
     var duration: Int = 10000
     
     // MARK: - Output Options
-    @Option(name: [.short, .long], help: "Output file path (default: current directory with timestamp)")
+    @Option(name: [.short, .long], help: ArgumentHelp(
+        "Output file path with extension (.mov or .mp4). Format is auto-detected from extension.",
+        discussion: """
+        Examples:
+          --output recording.mov     # MOV format (macOS native, high quality)
+          --output video.mp4         # MP4 format (universal compatibility)
+          --output /path/to/file.mov # Full path with MOV format
+        
+        If no extension is provided, defaults to .mov format.
+        If no output is specified, creates timestamped file in current directory.
+        """,
+        valueName: "path"
+    ))
     var output: String?
     
     @Flag(name: [.customShort("f"), .customLong("force")], help: "Force overwrite existing output file without prompting")
@@ -50,6 +62,9 @@ struct SwiftCaptureCommand: AsyncParsableCommand {
     @Option(help: "Audio quality: low, medium, or high (default: medium)")
     var audioQuality: String = "medium"
     
+    @Flag(name: [.customLong("system-audio-only")], help: "Force system-wide audio recording (ignores app-specific audio when recording apps)")
+    var systemAudioOnly: Bool = false
+    
     // MARK: - Advanced Recording Options
     @Option(help: "Frame rate: 15, 30, or 60 fps (default: 30)")
     var fps: Int = 30
@@ -57,8 +72,7 @@ struct SwiftCaptureCommand: AsyncParsableCommand {
     @Option(help: "Quality preset: low, medium, or high (default: medium)")
     var quality: String = "medium"
     
-    @Option(help: "Output format: mov or mp4 (default: mov)")
-    var format: String = "mov"
+
     
     @Flag(help: "Show cursor in recording")
     var showCursor: Bool = false
@@ -90,7 +104,6 @@ struct SwiftCaptureCommand: AsyncParsableCommand {
         try validateDuration()
         try validateFPS()
         try validateQuality()
-        try validateFormat()
         try validateAudioQuality()
         try validateScreen()
         try validateCountdown()
@@ -118,11 +131,7 @@ struct SwiftCaptureCommand: AsyncParsableCommand {
         }
     }
     
-    private func validateFormat() throws {
-        if !["mov", "mp4"].contains(format.lowercased()) {
-            throw ValidationError.invalidFormat(format)
-        }
-    }
+
     
     private func validateAudioQuality() throws {
         if !["low", "medium", "high"].contains(audioQuality.lowercased()) {
@@ -139,6 +148,28 @@ struct SwiftCaptureCommand: AsyncParsableCommand {
     private func validateCountdown() throws {
         if countdown < 0 {
             throw ValidationError.invalidCountdown(countdown)
+        }
+    }
+    
+    /// Detect output format from file extension or return default
+    /// - Returns: OutputFormat based on output file extension or .mov as default
+    func detectOutputFormat() -> OutputFormat {
+        guard let outputPath = output else {
+            return .mov // Default format when no output specified
+        }
+        
+        let pathExtension = (outputPath as NSString).pathExtension.lowercased()
+        
+        switch pathExtension {
+        case "mp4":
+            return .mp4
+        case "mov":
+            return .mov
+        case "": // No extension provided
+            return .mov // Default to MOV
+        default:
+            // Unsupported extension, default to MOV
+            return .mov
         }
     }
     
@@ -200,10 +231,10 @@ struct SwiftCaptureCommand: AsyncParsableCommand {
     
     private func validateArgumentCombinations() throws {
         // Check for conflicting screen/app options
-        if app != nil && (screen != 1 || area != nil) {
+        if app != nil && (screen != 1 || area != nil) && !systemAudioOnly {
             throw ValidationError(
                 "Application recording conflicts with screen/area selection.",
-                suggestion: "Use either --app for application recording OR --screen/--area for screen recording, but not both"
+                suggestion: "Use either --app for application recording OR --screen/--area for screen recording, but not both. Use --system-audio-only with --app to record system-wide audio."
             )
         }
         
@@ -229,7 +260,7 @@ struct SwiftCaptureCommand: AsyncParsableCommand {
         if screenList || appList || listPresets {
             let hasRecordingOptions = duration != 10000 || output != nil || area != nil || 
                                     screen != 1 || app != nil || enableMicrophone || 
-                                    fps != 30 || quality != "medium" || format != "mov" || 
+                                    fps != 30 || quality != "medium" || 
                                     audioQuality != "medium" || showCursor || countdown != 0 || force
             
             if hasRecordingOptions {
@@ -244,7 +275,7 @@ struct SwiftCaptureCommand: AsyncParsableCommand {
         if deletePreset != nil {
             let hasOtherOptions = duration != 10000 || output != nil || area != nil || 
                                 screen != 1 || app != nil || enableMicrophone || 
-                                fps != 30 || quality != "medium" || format != "mov" || 
+                                fps != 30 || quality != "medium" || 
                                 audioQuality != "medium" || showCursor || countdown != 0 || force || savePreset != nil || preset != nil
             
             if hasOtherOptions {
@@ -255,13 +286,13 @@ struct SwiftCaptureCommand: AsyncParsableCommand {
             }
         }
         
-        // Validate output file extension matches format
+        // Validate output file extension is supported
         if let outputPath = output {
             let pathExtension = (outputPath as NSString).pathExtension.lowercased()
-            if !pathExtension.isEmpty && pathExtension != format.lowercased() {
+            if !pathExtension.isEmpty && !["mov", "mp4"].contains(pathExtension) {
                 throw ValidationError(
-                    "Output file extension '\(pathExtension)' doesn't match format '\(format)'.",
-                    suggestion: "Either change the file extension to .\(format) or use --format \(pathExtension)"
+                    "Unsupported output file extension '\(pathExtension)'.",
+                    suggestion: "Use .mov or .mp4 extension, like 'recording.mov' or 'video.mp4'"
                 )
             }
         }
@@ -531,7 +562,8 @@ struct SwiftCaptureCommand: AsyncParsableCommand {
             if let app = app {
                 print("   Application: \(app)")
             }
-            print("   Video: \(fps)fps, \(quality) quality, \(format.uppercased())")
+            let detectedFormat = detectOutputFormat()
+            print("   Video: \(fps)fps, \(quality) quality, \(detectedFormat.rawValue.uppercased())")
             print("   Audio: \(enableMicrophone ? "microphone + system" : "system only"), \(audioQuality) quality")
             if showCursor {
                 print("   Cursor: visible")
@@ -658,11 +690,12 @@ struct SwiftCaptureCommand: AsyncParsableCommand {
             return customOutput
         }
         
-        // Generate timestamp-based filename
+        // Generate timestamp-based filename with detected format
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd_HH-mm-ss"
         let timestamp = formatter.string(from: Date())
-        let filename = "\(timestamp).\(format.lowercased())"
+        let detectedFormat = detectOutputFormat()
+        let filename = "\(timestamp).\(detectedFormat.fileExtension)"
         
         return FileManager.default.currentDirectoryPath + "/" + filename
     }

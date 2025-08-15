@@ -5,18 +5,43 @@ All notable changes to SwiftCapture will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [2.0.0] - 2024-01-15
+## [2.1.6] - 2025-08-15
+
+### Added
+
+- **System Audio Override**: New `--system-audio-only` option for application recording
+  - Allows recording system-wide audio when recording specific applications
+  - Solves the limitation where app recording only captures app-specific audio
+  - Works by switching to screen capture mode for audio while maintaining app window capture for video
+- **Enhanced Audio Configuration**: Updated AudioSettings model to support force system audio mode
+- **Improved Audio Documentation**: Added comprehensive audio recording guide
+
+### Fixed
+
+- **Application Audio Limitation**: Resolved issue where recording apps only captured app-generated sounds
+- **Audio Configuration**: Fixed missing forceSystemAudio parameter in various audio settings initializations
+
+### Technical Details
+
+- Updated `AudioSettings` struct with `forceSystemAudio` property
+- Enhanced `CaptureController` to handle mixed recording modes (app video + system audio)
+- Improved `ConfigurationManager` to process new audio options
+- Added validation for audio mode combinations
+
+## [2.0.0] - 2025-08-14
 
 ### Changed
+
 - **Project Renamed**: ScreenRecorder → SwiftCapture
 - **Command Renamed**: `screenrecorder` → `scap` (shorter, more efficient)
 - **Updated all documentation and examples** to reflect new naming
 
-## [2.0.0] - 2024-01-15
+## [2.0.0] - 2025-08-13
 
 ### Added
 
 #### Core Features
+
 - **Complete CLI Interface Rewrite**: Professional command-line interface using Swift ArgumentParser
 - **Multi-Screen Support**: Record from any connected display with automatic detection
 - **Application Window Recording**: Record specific applications instead of entire screens
@@ -29,6 +54,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Cursor Control**: Show or hide cursor in recordings
 
 #### CLI Options
+
 - `--duration` / `-d`: Recording duration in milliseconds
 - `--output` / `-o`: Custom output file path
 - `--screen` / `-s`: Screen selection by index
@@ -48,6 +74,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `--delete-preset`: Delete saved preset
 
 #### User Experience
+
 - **Comprehensive Help System**: Detailed help with examples and usage information
 - **Real-time Progress Indicators**: Recording duration display and status updates
 - **Intelligent Error Handling**: Clear error messages with suggested solutions
@@ -56,6 +83,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Permission Guidance**: Clear instructions for Screen Recording and Microphone permissions
 
 #### Technical Improvements
+
 - **Modular Architecture**: Clean separation of concerns with dedicated managers
 - **ScreenCaptureKit Integration**: Full utilization of modern macOS recording APIs
 - **Memory Optimization**: Efficient resource management for long recordings
@@ -63,6 +91,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Performance Optimization**: Optimized for different recording scenarios
 
 #### Documentation
+
 - **Comprehensive README**: Detailed usage examples and troubleshooting guide
 - **Bilingual Support**: Complete documentation in English and Chinese
 - **Installation Guide**: Multiple installation methods including Homebrew
@@ -70,12 +99,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Advanced Usage**: Scripting examples and automation workflows
 
 #### Distribution
+
 - **Homebrew Formula**: Professional Homebrew package for easy installation
 - **Release Automation**: Automated build and release process
 - **Cross-Architecture**: Universal binary supporting Intel and Apple Silicon
 - **System Integration**: Proper macOS integration with permissions and frameworks
 
 ### Changed
+
 - **Minimum System Requirements**: Now requires macOS 12.3+ (for ScreenCaptureKit)
 - **Command Interface**: Complete rewrite of command-line argument parsing
 - **File Naming**: Default naming changed to timestamp format (YYYY-MM-DD_HH-MM-SS.mov)
@@ -83,6 +114,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Error Messages**: Improved error messages with actionable suggestions
 
 ### Technical Details
+
 - **Swift Version**: Updated to Swift 5.6+
 - **Dependencies**: Added Swift ArgumentParser for robust CLI handling
 - **Frameworks**: ScreenCaptureKit, AVFoundation, CoreMedia, AppKit
@@ -90,18 +122,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Build System**: Swift Package Manager with release optimization
 
 ### Migration from 1.x
+
 - Update command-line usage to new argument format
 - Grant Screen Recording permission in System Preferences
 - Review new default file naming convention
 - Explore new features like presets and multi-screen support
 
 ### System Requirements
+
 - macOS 12.3 or later (required for ScreenCaptureKit)
 - Xcode 14.3 or later (for building from source)
 - Screen Recording permission in System Preferences
 - Microphone permission (optional, for `--enable-microphone`)
 
 ### Installation
+
 ```bash
 # Homebrew (recommended)
 brew install screenrecorder
@@ -113,6 +148,7 @@ swift build -c release
 ```
 
 ### Breaking Changes
+
 - Command-line interface completely changed
 - Minimum macOS version increased to 12.3
 - Default output naming format changed
@@ -123,6 +159,7 @@ swift build -c release
 ## [1.0.0] - 2023-12-01
 
 ### Added
+
 - Initial release with basic screen recording functionality
 - ScreenCaptureKit integration for modern macOS recording
 - Basic command-line interface
@@ -130,6 +167,7 @@ swift build -c release
 - System audio recording
 
 ### Technical Details
+
 - Swift 5.5+
 - macOS 11.0+ support
 - Basic argument parsing
@@ -140,6 +178,7 @@ swift build -c release
 ## Upcoming Features (Roadmap)
 
 ### Version 2.1.0 (Planned)
+
 - **Shell Completions**: Bash, Zsh, and Fish completion scripts
 - **Configuration Files**: YAML/JSON configuration file support
 - **Recording Profiles**: Advanced preset system with inheritance
@@ -148,6 +187,7 @@ swift build -c release
 - **Annotation Tools**: Basic drawing and text overlay support
 
 ### Version 2.2.0 (Planned)
+
 - **Streaming Support**: RTMP streaming capabilities
 - **Cloud Integration**: Direct upload to cloud services
 - **Advanced Filters**: Video filters and effects
@@ -155,6 +195,7 @@ swift build -c release
 - **Plugin System**: Extensible plugin architecture
 
 ### Version 3.0.0 (Future)
+
 - **GUI Application**: Optional graphical user interface
 - **Advanced Editing**: Built-in video editing capabilities
 - **Team Features**: Shared presets and configurations
@@ -175,4 +216,4 @@ We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) f
 
 ---
 
-*For detailed usage instructions and examples, see the [README.md](README.md) file.*
+_For detailed usage instructions and examples, see the [README.md](README.md) file._
