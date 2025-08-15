@@ -56,11 +56,11 @@ jobs:
         with:
           repository: ${{ github.repository_owner }}/homebrew-swiftcapture
           token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
-          path: homebrew-tap
+          path: homebrew-swiftcapture
           
       - name: Update Homebrew formula
         run: |
-          cd homebrew-tap
+          cd homebrew-swiftcapture
           VERSION="${{ steps.version.outputs.version }}"
           TAG="${{ steps.version.outputs.tag }}"
           SHA256="${{ steps.sha.outputs.sha256 }}"
@@ -71,7 +71,7 @@ jobs:
           
       - name: Commit and push formula update
         run: |
-          cd homebrew-tap
+          cd homebrew-swiftcapture
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add Formula/swiftcapture.rb

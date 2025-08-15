@@ -51,9 +51,12 @@
 - **主项目**: `GlennWong/SwiftCapture` - 包含源代码和 GitHub Actions
 - **Homebrew Tap**: `GlennWong/homebrew-swiftcapture` - 独立仓库，包含 Formula
 
-### 简化的 homebrew-swiftcapture README
+### 需要在 homebrew-swiftcapture 仓库中修改
 
-更新 `homebrew-swiftcapture` 仓库的 README.md，删除复杂的手动流程，只保留：
+在 `homebrew-swiftcapture` 仓库的 README.md 中：
+
+1. **全局替换** `homebrew-tap` 为 `homebrew-swiftcapture`
+2. **删除复杂的手动流程**，只保留自动化发布说明：
 
 ```markdown
 ## Release Process (For Maintainers)

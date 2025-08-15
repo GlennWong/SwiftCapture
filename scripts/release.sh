@@ -82,9 +82,9 @@ log_info "更新Formula文件"
 sed -i '' "s/sha256 \".*\"/sha256 \"${SHA256}\"/" Formula/swiftcapture.rb
 sed -i '' "s|url \".*\"|url \"${ARCHIVE_URL}\"|" Formula/swiftcapture.rb
 
-# 更新homebrew-tap Formula
-sed -i '' "s/sha256 \".*\"/sha256 \"${SHA256}\"/" homebrew-tap/Formula/swiftcapture.rb
-sed -i '' "s|url \".*\"|url \"${ARCHIVE_URL}\"|" homebrew-tap/Formula/swiftcapture.rb
+# 更新homebrew-swiftcapture Formula
+sed -i '' "s/sha256 \".*\"/sha256 \"${SHA256}\"/" homebrew-swiftcapture/Formula/swiftcapture.rb
+sed -i '' "s|url \".*\"|url \"${ARCHIVE_URL}\"|" homebrew-swiftcapture/Formula/swiftcapture.rb
 
 log_success "Formula文件已更新"
 
@@ -100,14 +100,14 @@ fi
 
 # 7. 提交更改
 log_info "提交Formula更新"
-git add Formula/swiftcapture.rb homebrew-tap/Formula/swiftcapture.rb
+git add Formula/swiftcapture.rb homebrew-swiftcapture/Formula/swiftcapture.rb
 git commit -m "Release ${VERSION}: Update SHA256 and URL"
 git push
 
-# 8. 更新homebrew-tap仓库（如果存在）
-if [ -d "homebrew-tap/.git" ]; then
-    log_info "更新homebrew-tap仓库"
-    cd homebrew-tap
+# 8. 更新homebrew-swiftcapture仓库（如果存在）
+if [ -d "homebrew-swiftcapture/.git" ]; then
+    log_info "更新homebrew-swiftcapture仓库"
+    cd homebrew-swiftcapture
     git add .
     git commit -m "Release ${VERSION}: Update formula"
     git push
