@@ -32,7 +32,7 @@
    - ✅ 自动更新源代码版本号
    - ✅ 自动计算 SHA256 哈希
    - ✅ 自动更新 Homebrew Formula
-   - ✅ 自动推送到 homebrew-tap 仓库
+   - ✅ 自动推送到 homebrew-swiftcapture 仓库
 
 3. **验证安装**
    ```bash
@@ -51,7 +51,7 @@
 - **主项目**: `GlennWong/SwiftCapture` - 包含源代码和 GitHub Actions
 - **Homebrew Tap**: `GlennWong/homebrew-swiftcapture` - 独立仓库，包含 Formula
 
-### 简化的 homebrew-tap README
+### 简化的 homebrew-swiftcapture README
 
 更新 `homebrew-swiftcapture` 仓库的 README.md，删除复杂的手动流程，只保留：
 
@@ -72,7 +72,7 @@
    - ✅ 自动更新源代码中的版本号
    - ✅ 自动计算新版本的 SHA256 哈希
    - ✅ 自动更新 Homebrew Formula
-   - ✅ 自动提交并推送到 homebrew-tap 仓库
+   - ✅ 自动提交并推送到 homebrew-swiftcapture 仓库
 
 3. **验证发布**
    ```bash
