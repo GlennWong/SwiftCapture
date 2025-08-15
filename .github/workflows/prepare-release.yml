@@ -1,0 +1,86 @@
+name: Prepare Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., 2.1.6)'
+        required: true
+        type: string
+
+jobs:
+  prepare-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+        
+      - name: Validate version format
+        run: |
+          if [[ ! "${{ github.event.inputs.version }}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Error: Version must be in format X.Y.Z (e.g., 2.1.6)"
+            exit 1
+          fi
+          
+      - name: Check if version already exists
+        run: |
+          if git tag | grep -q "^v${{ github.event.inputs.version }}$"; then
+            echo "Error: Version v${{ github.event.inputs.version }} already exists"
+            exit 1
+          fi
+          
+      - name: Update version in source files
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          
+          # Update release-config.json
+          sed -i "s/\"version\": \".*\"/\"version\": \"$VERSION\"/" release-config.json
+          
+          # Update SwiftCaptureCommand.swift
+          sed -i "s/version: \".*\"/version: \"$VERSION\"/" Sources/SwiftCapture/CLI/SwiftCaptureCommand.swift
+          
+          # Update build-release.sh
+          sed -i "s/VERSION=\".*\"/VERSION=\"$VERSION\"/" scripts/build-release.sh
+          
+      - name: Commit version updates
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add release-config.json Sources/SwiftCapture/CLI/SwiftCaptureCommand.swift scripts/build-release.sh
+          git commit -m "Prepare release v${{ github.event.inputs.version }}"
+          
+      - name: Create and push tag
+        run: |
+          git tag "v${{ github.event.inputs.version }}"
+          git push origin main
+          git push origin "v${{ github.event.inputs.version }}"
+          
+      - name: Create GitHub Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: "v${{ github.event.inputs.version }}"
+          release_name: "SwiftCapture v${{ github.event.inputs.version }}"
+          draft: false
+          prerelease: false
+          body: |
+            ## SwiftCapture v${{ github.event.inputs.version }}
+            
+            ### Installation
+            ```bash
+            brew install glennwong/swiftcapture/swiftcapture
+            ```
+            
+            ### Usage
+            ```bash
+            scap --help
+            scap --duration 30000 --enable-microphone
+            ```
+            
+            See [README](https://github.com/GlennWong/SwiftCapture/blob/main/readme.md) for detailed documentation.

@@ -24,37 +24,45 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
           
-      - name: Update version in source files
+      - name: Check if version is already updated
+        id: check_version
+        run: |
+          CURRENT_VERSION=$(grep 'version: "' Sources/SwiftCapture/CLI/SwiftCaptureCommand.swift | sed 's/.*version: "\([^"]*\)".*/\1/')
+          TARGET_VERSION="${{ steps.version.outputs.version }}"
+          
+          if [ "$CURRENT_VERSION" = "$TARGET_VERSION" ]; then
+            echo "Version already updated to $TARGET_VERSION"
+            echo "needs_update=false" >> $GITHUB_OUTPUT
+          else
+            echo "Version needs update from $CURRENT_VERSION to $TARGET_VERSION"
+            echo "needs_update=true" >> $GITHUB_OUTPUT
+          fi
+          
+      - name: Update version in source files and recreate tag
+        if: steps.check_version.outputs.needs_update == 'true'
         run: |
           VERSION="${{ steps.version.outputs.version }}"
+          TAG="${{ steps.version.outputs.tag }}"
           
-          # Update release-config.json
+          # Delete the existing tag locally and remotely
+          git tag -d "$TAG" || true
+          git push origin ":refs/tags/$TAG" || true
+          
+          # Update version in source files
           sed -i "s/\"version\": \".*\"/\"version\": \"$VERSION\"/" release-config.json
-          
-          # Update SwiftCaptureCommand.swift
           sed -i "s/version: \".*\"/version: \"$VERSION\"/" Sources/SwiftCapture/CLI/SwiftCaptureCommand.swift
-          
-          # Update build-release.sh
           sed -i "s/VERSION=\".*\"/VERSION=\"$VERSION\"/" scripts/build-release.sh
           
-      - name: Commit version updates
-        run: |
+          # Commit changes
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add release-config.json Sources/SwiftCapture/CLI/SwiftCaptureCommand.swift scripts/build-release.sh
+          git commit -m "Auto-update version to $VERSION"
           
-          # Only commit if there are changes
-          if ! git diff --staged --quiet; then
-            git commit -m "Auto-update version to ${{ steps.version.outputs.version }}"
-            echo "changes_made=true" >> $GITHUB_ENV
-          else
-            echo "changes_made=false" >> $GITHUB_ENV
-          fi
-          
-      - name: Push version updates
-        if: env.changes_made == 'true'
-        run: |
+          # Push changes and recreate tag
           git push origin HEAD:main
+          git tag "$TAG"
+          git push origin "$TAG"
           
       - name: Calculate SHA256
         id: sha
