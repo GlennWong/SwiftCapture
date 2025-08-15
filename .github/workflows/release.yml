@@ -42,11 +42,19 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add release-config.json Sources/SwiftCapture/CLI/SwiftCaptureCommand.swift scripts/build-release.sh
-          git diff --staged --quiet || git commit -m "Auto-update version to ${{ steps.version.outputs.version }}"
+          
+          # Only commit if there are changes
+          if ! git diff --staged --quiet; then
+            git commit -m "Auto-update version to ${{ steps.version.outputs.version }}"
+            echo "changes_made=true" >> $GITHUB_ENV
+          else
+            echo "changes_made=false" >> $GITHUB_ENV
+          fi
           
       - name: Push version updates
+        if: env.changes_made == 'true'
         run: |
-          git push origin main
+          git push origin HEAD:main
           
       - name: Calculate SHA256
         id: sha
