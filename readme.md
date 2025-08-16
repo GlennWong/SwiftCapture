@@ -12,7 +12,7 @@ A professional screen recording tool for macOS built with ScreenCaptureKit, feat
 - **Advanced Audio Control**: System audio recording with optional microphone input
 - **Flexible Area Selection**: Record full screen, custom areas, or centered regions
 - **Quality Controls**: Configurable frame rates (15/30/60 fps) and quality presets
-- **Multiple Output Formats**: Support for MOV and MP4 formats
+- **High-Quality Output**: Professional MOV format with optimized encoding
 - **Preset Management**: Save and reuse recording configurations
 - **Countdown Timer**: Optional countdown before recording starts
 - **Cursor Control**: Show or hide cursor in recordings
@@ -86,7 +86,7 @@ scap --duration 120000         # 2 minutes
 ```bash
 # Save to specific location
 scap --output ~/Desktop/recording.mov
-scap -o ./videos/demo.mp4
+scap -o ./videos/demo.mov
 
 # Default: Current directory with timestamp (YYYY-MM-DD_HH-MM-SS.mov)
 scap  # Creates: 2024-01-15_14-30-25.mov
@@ -169,9 +169,8 @@ scap --quality low            # Smaller files (~2Mbps)
 scap --quality medium         # Balanced (default, ~5Mbps)
 scap --quality high           # Best quality (~10Mbps)
 
-# Output format
-scap --format mov             # QuickTime (default)
-scap --format mp4             # MP4 for broader compatibility
+# Output is always in MOV format (QuickTime)
+# High-quality, macOS-native format with excellent compatibility
 ```
 
 ### Advanced Features
@@ -187,7 +186,7 @@ scap --countdown 3 --show-cursor
 # Combine multiple options
 scap --screen 2 --area 0:0:1920:1080 --enable-microphone \
                --fps 30 --quality high --countdown 5 --show-cursor \
-               --output ~/Desktop/presentation.mp4
+               --output ~/Desktop/presentation.mov
 ```
 
 ### Preset Management
@@ -222,7 +221,7 @@ scap --duration 30000 --countdown 3 --show-cursor
 
 # High-quality application demo
 scap --app Safari --duration 60000 --quality high --fps 60 \
-               --output ~/Desktop/safari-demo.mp4
+               --output ~/Desktop/safari-demo.mov
 ```
 
 ### Multi-Screen Setups
@@ -235,7 +234,7 @@ scap --screen-list
 scap --screen 2 --area 0:0:1920:1080 --quality high
 
 # Record primary display with custom area
-scap --screen 1 --area 0:0:2560:1440 --format mp4
+scap --screen 1 --area 0:0:2560:1440
 
 # Centered recording works across different screen sizes
 scap --screen 2 --area center:1920:1080  # Auto-centers on any screen size
@@ -307,7 +306,6 @@ scap --preset "tutorial" --duration 60000 --output custom.mov
 | ----------------- | -------------------- | ----------------- | ------- |
 | `--fps`           | Frame rate           | 15, 30, 60        | 30      |
 | `--quality`       | Video quality preset | low, medium, high | medium  |
-| `--format`        | Output format        | mov, mp4          | mov     |
 | `--audio-quality` | Audio quality preset | low, medium, high | medium  |
 
 ### Audio and Visual
@@ -410,8 +408,8 @@ Only required when using `--enable-microphone`:
 
 **"File extension mismatch"**
 
-- Ensure file extension matches `--format` option
-- `.mov` for `--format mov`, `.mp4` for `--format mp4`
+- Output files are always in MOV format
+- Use `.mov` extension for output files
 
 **File conflicts and overwriting**
 
@@ -440,20 +438,19 @@ Only required when using `--enable-microphone`:
 
 - Use `--quality low` or `--quality medium`
 - Lower frame rate with `--fps 15` or `--fps 30`
-- Use `--format mp4` for better compression
 - Record specific areas instead of full screen
 
 **For Best Quality:**
 
 - Use `--quality high` with `--fps 60`
-- Use `--format mov` for best macOS compatibility
+- MOV format provides excellent macOS compatibility
 - Ensure sufficient disk space (1GB+ for longer recordings)
 
 **Automatic Optimizations:**
 
 - SwiftCapture automatically adjusts bitrates based on resolution
 - HEVC codec used for high-resolution MOV files (better compression)
-- H.264 codec used for MP4 files (maximum compatibility)
+- H.264/HEVC codecs provide optimal quality and compatibility
 - Quality recommendations based on content type and resolution
 
 ### System Requirements Issues
@@ -552,10 +549,10 @@ scap --screen "$SCREEN" \
 
 echo "Recording saved to: $OUTPUT_DIR/meeting_$TIMESTAMP.mov"
 
-# Optional: Convert to MP4 for sharing
+# Optional: Convert for sharing if needed
 # ffmpeg -i "$OUTPUT_DIR/meeting_$TIMESTAMP.mov" \
 #        -c:v libx264 -c:a aac \
-#        "$OUTPUT_DIR/meeting_$TIMESTAMP.mp4"
+#        "$OUTPUT_DIR/meeting_$TIMESTAMP_converted.mov"
 ```
 
 ### Batch Recording
@@ -594,7 +591,7 @@ done
 ```bash
 # Combine with ffmpeg for post-processing
 scap --duration 30000 --quality high --output temp_recording.mov
-ffmpeg -i temp_recording.mov -vf "scale=1280:720" final_recording.mp4
+ffmpeg -i temp_recording.mov -vf "scale=1280:720" final_recording.mov
 rm temp_recording.mov
 ```
 
@@ -604,8 +601,7 @@ rm temp_recording.mov
 
 | Format | Codecs      | Max Resolution | Compatibility                    |
 | ------ | ----------- | -------------- | -------------------------------- |
-| MOV    | H.264, HEVC | 8K (7680×4320) | macOS native, professional tools |
-| MP4    | H.264       | 4K (4096×2160) | Universal compatibility          |
+| MOV    | H.264, HEVC | 8K (7680×4320) | macOS native, professional quality |
 
 ### Quality Settings and Bitrates
 
@@ -710,7 +706,7 @@ swift build -c release
 - Added audio quality controls and microphone support
 - Added countdown functionality with cancellation support
 - Added cursor visibility control
-- Added multiple output formats (MOV, MP4) with codec optimization
+- Added optimized MOV output with advanced codec selection
 - Added file conflict resolution (interactive/auto-numbering/force)
 - Added centered area recording (`center:width:height`)
 - Added automatic bitrate calculation based on resolution/fps

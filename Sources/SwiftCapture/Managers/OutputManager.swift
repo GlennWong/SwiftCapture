@@ -149,22 +149,8 @@ class OutputManager {
             )
         }
         
-        // Check resolution limits for MP4
-        if format == .mp4 {
-            let resolution = config.videoSettings.resolution
-            let maxMP4Resolution: CGFloat = 4096 // 4K limit for broad MP4 compatibility
-            
-            if resolution.width > maxMP4Resolution || resolution.height > maxMP4Resolution {
-                print("⚠️  Warning: Resolution \(Int(resolution.width))x\(Int(resolution.height)) may not be compatible with all MP4 players")
-                print("   Consider using MOV format for high resolutions or reducing recording area")
-            }
-        }
-        
-        // Check frame rate compatibility
-        if config.videoSettings.fps > 60 && format == .mp4 {
-            print("⚠️  Warning: Frame rates above 60fps may not be supported by all MP4 players")
-            print("   Consider using MOV format for high frame rates")
-        }
+        // MOV format supports all resolutions and frame rates natively
+        // No additional validation needed for MOV format
         
         // Log format selection
         print("📹 Format Configuration:")
@@ -191,7 +177,7 @@ class OutputManager {
                 return .h264 // Standard choice for compatibility
             }
         case .mp4:
-            // For MP4, stick with H.264 for maximum compatibility
+            // Legacy case - should not be used since format is fixed to MOV
             return .h264
         }
     }

@@ -104,15 +104,10 @@ class ParameterValidator {
         return videoQuality
     }
     
-    /// Validate output format
-    /// - Parameter format: Format string
-    /// - Returns: OutputFormat enum
-    /// - Throws: ValidationError if invalid
-    func validateFormat(_ format: String) throws -> OutputFormat {
-        guard let outputFormat = OutputFormat(rawValue: format.lowercased()) else {
-            throw ValidationError.invalidFormat(format)
-        }
-        return outputFormat
+    /// Get fixed output format (always MOV)
+    /// - Returns: OutputFormat.mov (fixed format)
+    func getOutputFormat() -> OutputFormat {
+        return .mov // Fixed to MOV format for optimal quality
     }
     
     /// Validate countdown duration

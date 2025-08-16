@@ -27,7 +27,7 @@ enum OutputFormat: String, CaseIterable {
             // MOV supports both H.264 and HEVC, prefer H.264 for compatibility
             return .h264
         case .mp4:
-            // MP4 works best with H.264 for broad compatibility
+            // Legacy case - should not be used since format is fixed to MOV
             return .h264
         }
     }
@@ -39,7 +39,7 @@ enum OutputFormat: String, CaseIterable {
             // MOV is more flexible and supports more codecs
             return [.h264, .hevc, .proRes422, .proRes4444]
         case .mp4:
-            // MP4 is more limited but has broader compatibility
+            // Legacy case - should not be used since format is fixed to MOV
             return [.h264, .hevc]
         }
     }
@@ -54,9 +54,9 @@ enum OutputFormat: String, CaseIterable {
                 "fragmentedMP4": false
             ]
         case .mp4:
-            // MP4 format optimizations for broader compatibility
+            // Legacy case - should not be used since format is fixed to MOV
             return [
-                "fastStart": true, // Enable fast start for web compatibility
+                "fastStart": true,
                 "fragmentedMP4": false
             ]
         }
@@ -75,7 +75,7 @@ enum OutputFormat: String, CaseIterable {
         case .mov:
             return "MOV (QuickTime) - macOS native format, high quality"
         case .mp4:
-            return "MP4 (MPEG-4) - universal format, broad compatibility"
+            return "MP4 (MPEG-4) - legacy format, not used"
         }
     }
 }

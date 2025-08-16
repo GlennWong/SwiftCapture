@@ -56,7 +56,7 @@ final class PresetStorageTests: XCTestCase {
         XCTAssertEqual(savedPreset.duration, 10000)
         XCTAssertEqual(savedPreset.fps, 30)
         XCTAssertEqual(savedPreset.quality, "medium")
-        XCTAssertEqual(savedPreset.format, "mov")
+        // Format is fixed to MOV, no longer stored in presets
     }
     
     func testLoadPreset_ExistingPreset_ShouldLoadSuccessfully() throws {
@@ -73,7 +73,7 @@ final class PresetStorageTests: XCTestCase {
         XCTAssertEqual(loadedPreset.duration, 10000)
         XCTAssertEqual(loadedPreset.fps, 30)
         XCTAssertEqual(loadedPreset.quality, "medium")
-        XCTAssertEqual(loadedPreset.format, "mov")
+        // Format is fixed to MOV, no longer stored in presets
         XCTAssertNotNil(loadedPreset.lastUsed) // Should be updated when loaded
     }
     

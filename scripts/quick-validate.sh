@@ -15,7 +15,7 @@ swift build -c release && \
 
 # 命令2: 综合录制功能验证（屏幕录制 + 区域选择 + 质量设置 + 格式 + 预设管理）
 echo "2️⃣ 综合录制功能验证..."
-.build/release/SwiftCapture --save-preset "quick-test" --screen 1 --area center:640:480 --duration 2000 --quality high --fps 30 --countdown 1 --show-cursor --format mov --output quick-test.mov && \
+.build/release/SwiftCapture --save-preset "quick-test" --screen 1 --area center:640:480 --duration 2000 --quality high --fps 30 --countdown 1 --show-cursor --output quick-test.mov && \
 .build/release/SwiftCapture --preset "quick-test" --duration 1000 --output preset-test.mov && \
 .build/release/SwiftCapture --delete-preset "quick-test"
 

@@ -230,7 +230,7 @@ extension VideoSettings {
                 return .h264 // Standard choice for compatibility
             }
         case .mp4:
-            // For MP4, stick with H.264 for maximum compatibility
+            // Legacy case - should not be used since format is fixed to MOV
             return .h264
         }
     }

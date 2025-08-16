@@ -74,21 +74,10 @@ extension ValidationError {
         )
     }
     
-    static func invalidFormat(_ format: String) -> ValidationError {
-        let suggestion: String
-        let lowercased = format.lowercased()
-        
-        if lowercased.contains("mov") || lowercased.contains("quicktime") {
-            suggestion = "Did you mean --format mov? Use 'mov' or 'mp4'"
-        } else if lowercased.contains("mp4") || lowercased.contains("mpeg") {
-            suggestion = "Did you mean --format mp4? Use 'mov' or 'mp4'"
-        } else {
-            suggestion = "Use --format mov (macOS native) or --format mp4 (broader compatibility)"
-        }
-        
-        return ValidationError(
-            "Invalid format: '\(format)'. Format must be 'mov' or 'mp4'.",
-            suggestion: suggestion
+    static func formatNotSupported() -> ValidationError {
+        ValidationError(
+            "Output format is fixed to MOV for optimal quality and compatibility.",
+            suggestion: "SwiftCapture always outputs high-quality MOV files. Use .mov extension for output files."
         )
     }
     

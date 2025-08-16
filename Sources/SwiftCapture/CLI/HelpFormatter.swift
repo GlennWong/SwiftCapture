@@ -9,16 +9,15 @@ struct HelpFormatter {
     
     EXAMPLES:
       scap --duration 30000 --fps 60                    # 30 second recording at 60fps
-      scap --output video.mov --force                   # MOV format (macOS native, high quality)
-      scap --output recording.mp4                       # MP4 format (universal compatibility)
+      scap --output video.mov --force                   # High-quality MOV output
       scap -f -o video.mov --duration 5000              # Short form: force overwrite
       scap --area 0:0:1920:1080 --screen 2             # Record specific area on second screen
       scap --app Safari --duration 15000                # Record Safari for 15 seconds
     
-    OUTPUT FORMATS:
-      • .mov extension → MOV format (macOS native, supports high quality codecs)
-      • .mp4 extension → MP4 format (universal compatibility, smaller files)
-      • No extension → defaults to .mov format
+    OUTPUT FORMAT:
+      • Always outputs high-quality MOV format (macOS native)
+      • Use .mov extension or omit for automatic naming
+      • Optimized encoding with H.264/HEVC codecs
     
     QUICK REFERENCE:
       • Use --screen-list to identify available displays

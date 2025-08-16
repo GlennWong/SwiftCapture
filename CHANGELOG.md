@@ -48,7 +48,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Advanced Audio Control**: System audio recording with optional microphone input
 - **Flexible Area Selection**: Record full screen, custom areas, or centered regions
 - **Quality Controls**: Configurable frame rates (15/30/60 fps) and quality presets (low/medium/high)
-- **Multiple Output Formats**: Support for both MOV and MP4 formats
+- **High-Quality Output**: Professional MOV format with optimized encoding
 - **Preset Management**: Save and reuse recording configurations
 - **Countdown Timer**: Optional countdown before recording starts (1-10 seconds)
 - **Cursor Control**: Show or hide cursor in recordings
@@ -65,7 +65,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `--enable-microphone` / `-m`: Include microphone audio
 - `--fps`: Frame rate control (15, 30, 60)
 - `--quality`: Quality presets (low, medium, high)
-- `--format`: Output format (mov, mp4)
+- Output format: Fixed MOV format for optimal quality
 - `--show-cursor`: Include cursor in recording
 - `--countdown`: Countdown before recording starts
 - `--save-preset`: Save current settings as preset

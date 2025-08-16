@@ -37,12 +37,12 @@ $BINARY --delete-preset "test-preset"
 
 # 4. 综合录制功能测试 - 一个命令测试多个功能
 echo -e "${YELLOW}4️⃣ 综合录制功能测试...${NC}"
-$BINARY --screen 1 --area center:800:600 --duration 5000 --quality medium --fps 30 --countdown 3 --show-cursor --format mov --output comprehensive-test.mov &
+$BINARY --screen 1 --area center:800:600 --duration 5000 --quality medium --fps 30 --countdown 3 --show-cursor --output comprehensive-test.mov &
 sleep 8 && pkill -f SwiftCapture || true
 
 # 5. 应用录制和音频功能测试
 echo -e "${YELLOW}5️⃣ 应用录制和音频功能测试...${NC}"
-$BINARY --app Finder --enable-microphone --duration 3000 --audio-quality high --format mp4 --output app-audio-test.mp4 &
+$BINARY --app Finder --enable-microphone --duration 3000 --audio-quality high --output app-audio-test.mov &
 sleep 5 && pkill -f SwiftCapture || true
 
 # 6. 运行单元测试
@@ -51,4 +51,4 @@ swift test
 
 echo -e "${GREEN}✅ 所有功能验证完成！${NC}"
 echo "生成的测试文件："
-ls -la *.mov *.mp4 2>/dev/null || echo "无录制文件生成（正常，因为录制被中断）"
+ls -la *.mov 2>/dev/null || echo "无录制文件生成（正常，因为录制被中断）"

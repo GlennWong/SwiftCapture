@@ -12,7 +12,7 @@
 - **高级音频控制**：系统音频录制，可选麦克风输入
 - **灵活区域选择**：支持全屏、自定义区域或居中区域录制
 - **质量控制**：可配置帧率（15/30/60 fps）和质量预设
-- **多种输出格式**：支持 MOV 和 MP4 格式
+- **高质量输出**：专业 MOV 格式，优化编码
 - **预设管理**：保存和重用录制配置
 - **倒计时功能**：录制开始前的可选倒计时
 - **光标控制**：在录制中显示或隐藏光标
@@ -97,7 +97,7 @@ scap --duration 120000         # 2 分钟
 ```bash
 # 保存到指定位置
 scap --output ~/Desktop/recording.mov
-scap -o ./videos/demo.mp4
+scap -o ./videos/demo.mov
 
 # 默认：当前目录，带时间戳（YYYY-MM-DD_HH-MM-SS.mov）
 scap  # 创建：2024-01-15_14-30-25.mov
@@ -180,9 +180,8 @@ scap --quality low            # 较小文件（~2Mbps）
 scap --quality medium         # 平衡（默认，~5Mbps）
 scap --quality high           # 最佳质量（~10Mbps）
 
-# 输出格式
-scap --format mov             # QuickTime（默认）
-scap --format mp4             # MP4，更广泛兼容性
+# 输出格式始终为 MOV（QuickTime）
+# 高质量的 macOS 原生格式，具有出色的兼容性
 ```
 
 ### 高级功能
@@ -198,7 +197,7 @@ scap --countdown 3 --show-cursor
 # 组合多个选项
 scap --screen 2 --area 0:0:1920:1080 --enable-microphone \
                --fps 30 --quality high --countdown 5 --show-cursor \
-               --output ~/Desktop/presentation.mp4
+               --output ~/Desktop/presentation.mov
 ```
 
 ### 预设管理
@@ -233,7 +232,7 @@ scap --duration 30000 --countdown 3 --show-cursor
 
 # 高质量应用程序演示
 scap --app Safari --duration 60000 --quality high --fps 60 \
-               --output ~/Desktop/safari-demo.mp4
+               --output ~/Desktop/safari-demo.mov
 ```
 
 ### 多屏幕设置
@@ -246,7 +245,7 @@ scap --screen-list
 scap --screen 2 --area 0:0:1920:1080 --quality high
 
 # 录制主显示器的自定义区域
-scap --screen 1 --area 0:0:2560:1440 --format mp4
+scap --screen 1 --area 0:0:2560:1440
 
 # 居中录制适用于不同屏幕尺寸
 scap --screen 2 --area center:1920:1080  # 在任何屏幕尺寸上自动居中
@@ -318,7 +317,6 @@ scap --preset "tutorial" --duration 60000 --output custom.mov
 | ----------------- | ------------ | ----------------- | ------ |
 | `--fps`           | 帧率         | 15, 30, 60        | 30     |
 | `--quality`       | 视频质量预设 | low, medium, high | medium |
-| `--format`        | 输出格式     | mov, mp4          | mov    |
 | `--audio-quality` | 音频质量预设 | low, medium, high | medium |
 
 ### 音频和视觉
@@ -421,8 +419,8 @@ scap --preset "tutorial" --duration 60000 --output custom.mov
 
 **"文件扩展名不匹配"**
 
-- 确保文件扩展名与 `--format` 选项匹配
-- `--format mov` 使用 `.mov`，`--format mp4` 使用 `.mp4`
+- 输出文件始终为 MOV 格式
+- 输出文件请使用 `.mov` 扩展名
 
 **文件冲突和覆盖**
 
@@ -451,20 +449,19 @@ scap --preset "tutorial" --duration 60000 --output custom.mov
 
 - 使用 `--quality low` 或 `--quality medium`
 - 使用 `--fps 15` 或 `--fps 30` 降低帧率
-- 使用 `--format mp4` 获得更好的压缩
 - 录制特定区域而非全屏
 
 **最佳质量：**
 
 - 使用 `--quality high` 配合 `--fps 60`
-- 使用 `--format mov` 获得最佳 macOS 兼容性
+- MOV 格式提供最佳 macOS 兼容性
 - 确保足够的磁盘空间（长录制需要 1GB+）
 
 **自动优化：**
 
 - SwiftCapture 根据分辨率自动调整比特率
 - 高分辨率 MOV 文件使用 HEVC 编解码器（更好的压缩）
-- MP4 文件使用 H.264 编解码器（最大兼容性）
+- H.264/HEVC 编解码器提供最佳质量和兼容性
 - 基于内容类型和分辨率的质量建议
 
 ### 系统要求问题
@@ -563,10 +560,10 @@ scap --screen "$SCREEN" \
 
 echo "录制已保存到：$OUTPUT_DIR/meeting_$TIMESTAMP.mov"
 
-# 可选：转换为 MP4 以便分享
+# 可选：如需要可进行格式转换
 # ffmpeg -i "$OUTPUT_DIR/meeting_$TIMESTAMP.mov" \
 #        -c:v libx264 -c:a aac \
-#        "$OUTPUT_DIR/meeting_$TIMESTAMP.mp4"
+#        "$OUTPUT_DIR/meeting_$TIMESTAMP_converted.mov"
 ```
 
 ### 批量录制
@@ -605,7 +602,7 @@ done
 ```bash
 # 与 ffmpeg 结合进行后处理
 scap --duration 30000 --quality high --output temp_recording.mov
-ffmpeg -i temp_recording.mov -vf "scale=1280:720" final_recording.mp4
+ffmpeg -i temp_recording.mov -vf "scale=1280:720" final_recording.mov
 rm temp_recording.mov
 ```
 
@@ -615,8 +612,7 @@ rm temp_recording.mov
 
 | 格式 | 编解码器    | 最大分辨率     | 兼容性               |
 | ---- | ----------- | -------------- | -------------------- |
-| MOV  | H.264, HEVC | 8K (7680×4320) | macOS 原生，专业工具 |
-| MP4  | H.264       | 4K (4096×2160) | 通用兼容性           |
+| MOV  | H.264, HEVC | 8K (7680×4320) | macOS 原生，专业质量 |
 
 ### 质量设置和比特率
 
@@ -721,7 +717,7 @@ swift build -c release
 - 添加音频质量控制和麦克风支持
 - 添加带取消支持的倒计时功能
 - 添加光标可见性控制
-- 添加多种输出格式（MOV、MP4）和编解码器优化
+- 添加优化的 MOV 输出格式和高级编解码器选择
 - 添加文件冲突解决（交互式/自动编号/强制）
 - 添加居中区域录制（`center:width:height`）
 - 添加基于分辨率/fps 的自动比特率计算

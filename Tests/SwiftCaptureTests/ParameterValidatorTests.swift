@@ -183,24 +183,12 @@ final class ParameterValidatorTests: XCTestCase {
     
     // MARK: - Format Validation Tests
     
-    func testValidateFormat_ValidValues_ShouldReturnCorrectEnum() throws {
-        XCTAssertEqual(try validator.validateFormat("mov"), .mov)
-        XCTAssertEqual(try validator.validateFormat("mp4"), .mp4)
-        
-        // Test case insensitive
-        XCTAssertEqual(try validator.validateFormat("MOV"), .mov)
-        XCTAssertEqual(try validator.validateFormat("MP4"), .mp4)
+    func testGetOutputFormat_ShouldAlwaysReturnMOV() throws {
+        // Format is now fixed to MOV
+        XCTAssertEqual(validator.getOutputFormat(), .mov)
     }
     
-    func testValidateFormat_InvalidValues_ShouldThrow() {
-        XCTAssertThrowsError(try validator.validateFormat("avi")) { error in
-            XCTAssertTrue(error is ValidationError)
-        }
-        
-        XCTAssertThrowsError(try validator.validateFormat("mkv")) { error in
-            XCTAssertTrue(error is ValidationError)
-        }
-    }
+
     
     // MARK: - Countdown Validation Tests
     

@@ -21,11 +21,10 @@ struct SwiftCaptureCommand: AsyncParsableCommand {
     
     // MARK: - Output Options
     @Option(name: [.short, .long], help: ArgumentHelp(
-        "Output file path with extension (.mov or .mp4). Format is auto-detected from extension.",
+        "Output file path with .mov extension. Always outputs high-quality MOV format.",
         discussion: """
         Examples:
-          --output recording.mov     # MOV format (macOS native, high quality)
-          --output video.mp4         # MP4 format (universal compatibility)
+          --output recording.mov     # High-quality MOV format
           --output /path/to/file.mov # Full path with MOV format
         
         If no extension is provided, defaults to .mov format.
@@ -151,26 +150,10 @@ struct SwiftCaptureCommand: AsyncParsableCommand {
         }
     }
     
-    /// Detect output format from file extension or return default
-    /// - Returns: OutputFormat based on output file extension or .mov as default
+    /// Get output format - always MOV for optimal quality
+    /// - Returns: OutputFormat.mov (fixed format)
     func detectOutputFormat() -> OutputFormat {
-        guard let outputPath = output else {
-            return .mov // Default format when no output specified
-        }
-        
-        let pathExtension = (outputPath as NSString).pathExtension.lowercased()
-        
-        switch pathExtension {
-        case "mp4":
-            return .mp4
-        case "mov":
-            return .mov
-        case "": // No extension provided
-            return .mov // Default to MOV
-        default:
-            // Unsupported extension, default to MOV
-            return .mov
-        }
+        return .mov // Fixed to MOV format for optimal quality and compatibility
     }
     
     private func validateArea() throws {
@@ -289,10 +272,10 @@ struct SwiftCaptureCommand: AsyncParsableCommand {
         // Validate output file extension is supported
         if let outputPath = output {
             let pathExtension = (outputPath as NSString).pathExtension.lowercased()
-            if !pathExtension.isEmpty && !["mov", "mp4"].contains(pathExtension) {
+            if !pathExtension.isEmpty && pathExtension != "mov" {
                 throw ValidationError(
-                    "Unsupported output file extension '\(pathExtension)'.",
-                    suggestion: "Use .mov or .mp4 extension, like 'recording.mov' or 'video.mp4'"
+                    "Unsupported output file extension '\(pathExtension)'. SwiftCapture only outputs MOV format.",
+                    suggestion: "Use .mov extension, like 'recording.mov' or omit extension for automatic naming"
                 )
             }
         }

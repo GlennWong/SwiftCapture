@@ -181,7 +181,7 @@ struct MockSwiftCaptureCommand {
     var audioQuality: String = "medium"
     var fps: Int = 30
     var quality: String = "medium"
-    var format: String = "mov"
+    // Output format is fixed to MOV
     var showCursor: Bool = false
     var countdown: Int = 0
     var savePreset: String? = nil

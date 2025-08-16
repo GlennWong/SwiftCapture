@@ -67,7 +67,7 @@ struct RecordingPreset: Codable {
         self.enableMicrophone = configuration.audioSettings.includeMicrophone
         self.fps = configuration.videoSettings.fps
         self.quality = configuration.videoSettings.quality.rawValue
-        self.format = configuration.outputFormat.rawValue
+        self.format = "mov" // Always MOV format
         self.showCursor = configuration.videoSettings.showCursor
         self.countdown = configuration.countdown
         self.audioQuality = configuration.audioSettings.quality.rawValue
@@ -99,10 +99,8 @@ struct RecordingPreset: Codable {
             throw ValidationError.invalidQuality(quality)
         }
         
-        // Parse output format
-        guard let outputFormat = OutputFormat(rawValue: format) else {
-            throw ValidationError.invalidFormat(format)
-        }
+        // Output format is always MOV (legacy presets may have different values)
+        let outputFormat = OutputFormat.mov
         
         // Parse audio quality
         guard let audioQualityEnum = AudioQuality(rawValue: audioQuality) else {
