@@ -27,10 +27,16 @@ jobs:
         echo "version=$VERSION" >> $GITHUB_OUTPUT
         echo "Version: $VERSION"
         
-    - name: Update version in release config
+    - name: Update version in release config and source code
       run: |
-        jq '.version = "${{ steps.version.outputs.version }}"' release-config.json > tmp.json
+        VERSION="${{ steps.version.outputs.version }}"
+        
+        # Update release-config.json
+        jq ".version = \"$VERSION\"" release-config.json > tmp.json
         mv tmp.json release-config.json
+        
+        # Update version in SwiftCaptureCommand.swift
+        sed -i '' "s/version: \"[0-9]\+\.[0-9]\+\.[0-9]\+\"/version: \"$VERSION\"/" Sources/SwiftCapture/CLI/SwiftCaptureCommand.swift
         
     - name: Build release and update formula
       run: |
