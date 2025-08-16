@@ -9,3 +9,9 @@ DerivedData/
 .netrc
 **.mov
 **.mp4
+
+# Release artifacts (dynamically generated)
+/release/
+scap-v*.tar.gz*
+swiftcapture.rb
+test-homebrew-install.sh

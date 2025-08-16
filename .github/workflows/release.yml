@@ -2,98 +2,115 @@ name: Release
 
 on:
   release:
-    types: [published]
+    types: [created]
 
 jobs:
-  update-homebrew:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
+  build-and-release:
+    runs-on: macos-latest
+    
     steps:
-      - name: Checkout main repo
-        uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          fetch-depth: 0
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Xcode
+      uses: maxim-lobanov/setup-xcode@v1
+      with:
+        xcode-version: latest-stable
         
-      - name: Extract version from tag
-        id: version
-        run: |
-          VERSION=${GITHUB_REF#refs/tags/v}
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+    - name: Get version from release tag
+      id: version
+      run: |
+        VERSION=${GITHUB_REF#refs/tags/v}
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "Version: $VERSION"
+        
+    - name: Update version in release config
+      run: |
+        jq '.version = "${{ steps.version.outputs.version }}"' release-config.json > tmp.json
+        mv tmp.json release-config.json
+        
+    - name: Build release and update formula
+      run: |
+        chmod +x scripts/release-automation.sh
+        ./scripts/release-automation.sh ${{ steps.version.outputs.version }}
+        
+    - name: Create release archive info
+      id: archive
+      run: |
+        VERSION="${{ steps.version.outputs.version }}"
+        ARCHIVE_NAME="scap-v${VERSION}-macos.tar.gz"
+        SHA256=$(shasum -a 256 "$ARCHIVE_NAME" | cut -d' ' -f1)
+        echo "archive_name=$ARCHIVE_NAME" >> $GITHUB_OUTPUT
+        echo "sha256=$SHA256" >> $GITHUB_OUTPUT
+        
+    - name: Upload release assets and update release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: v${{ steps.version.outputs.version }}
+        name: SwiftCapture v${{ steps.version.outputs.version }}
+        body: |
+          ## SwiftCapture v${{ steps.version.outputs.version }}
           
-      - name: Check if version is already updated
-        id: check_version
-        run: |
-          CURRENT_VERSION=$(grep 'version: "' Sources/SwiftCapture/CLI/SwiftCaptureCommand.swift | sed 's/.*version: "\([^"]*\)".*/\1/')
-          TARGET_VERSION="${{ steps.version.outputs.version }}"
+          Professional screen recording tool for macOS with comprehensive CLI interface.
           
-          if [ "$CURRENT_VERSION" = "$TARGET_VERSION" ]; then
-            echo "Version already updated to $TARGET_VERSION"
-            echo "needs_update=false" >> $GITHUB_OUTPUT
-          else
-            echo "Version needs update from $CURRENT_VERSION to $TARGET_VERSION"
-            echo "needs_update=true" >> $GITHUB_OUTPUT
-          fi
+          ### Installation via Homebrew
+          ```bash
+          brew tap GlennWong/swiftcapture
+          brew install swiftcapture
+          ```
           
-      - name: Update version in source files and recreate tag
-        if: steps.check_version.outputs.needs_update == 'true'
-        run: |
-          VERSION="${{ steps.version.outputs.version }}"
-          TAG="${{ steps.version.outputs.tag }}"
+          ### Manual Installation
+          1. Download the archive below
+          2. Extract: `tar -xzf ${{ steps.archive.outputs.archive_name }}`
+          3. Run: `./install.sh`
           
-          # Delete the existing tag locally and remotely
-          git tag -d "$TAG" || true
-          git push origin ":refs/tags/$TAG" || true
+          ### System Requirements
+          - macOS 12.3 (Monterey) or later
+          - Screen Recording permission
+          - Microphone permission (optional)
           
-          # Update version in source files
-          sed -i "s/\"version\": \".*\"/\"version\": \"$VERSION\"/" release-config.json
-          sed -i "s/version: \".*\"/version: \"$VERSION\"/" Sources/SwiftCapture/CLI/SwiftCaptureCommand.swift
-          sed -i "s/VERSION=\".*\"/VERSION=\"$VERSION\"/" scripts/build-release.sh
+          ### Usage
+          ```bash
+          scap --help                    # Show help
+          scap --screen-list            # List available screens  
+          scap --duration 5000          # Record for 5 seconds
+          scap --output recording.mov   # Specify output file
+          ```
           
-          # Commit changes
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          git add release-config.json Sources/SwiftCapture/CLI/SwiftCaptureCommand.swift scripts/build-release.sh
-          git commit -m "Auto-update version to $VERSION"
-          
-          # Push changes and recreate tag
-          git push origin HEAD:main
-          git tag "$TAG"
-          git push origin "$TAG"
-          
-      - name: Calculate SHA256
-        id: sha
-        run: |
-          URL="https://github.com/${{ github.repository }}/archive/${{ steps.version.outputs.tag }}.tar.gz"
-          SHA256=$(curl -sL "$URL" | sha256sum | cut -d' ' -f1)
-          echo "sha256=$SHA256" >> $GITHUB_OUTPUT
-          
-      - name: Checkout homebrew tap
-        uses: actions/checkout@v4
-        with:
-          repository: ${{ github.repository_owner }}/homebrew-swiftcapture
-          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
-          path: homebrew-swiftcapture
-          
-      - name: Update Homebrew formula
-        run: |
-          cd homebrew-swiftcapture
-          VERSION="${{ steps.version.outputs.version }}"
-          TAG="${{ steps.version.outputs.tag }}"
-          SHA256="${{ steps.sha.outputs.sha256 }}"
-          
-          # Update formula
-          sed -i "s|url \".*\"|url \"https://github.com/${{ github.repository }}/archive/$TAG.tar.gz\"|" Formula/swiftcapture.rb
-          sed -i "s/sha256 \".*\"/sha256 \"$SHA256\"/" Formula/swiftcapture.rb
-          
-      - name: Commit and push formula update
-        run: |
-          cd homebrew-swiftcapture
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          git add Formula/swiftcapture.rb
-          git commit -m "Release ${{ steps.version.outputs.tag }}: Update formula"
-          git push
+          ### Checksums
+          - SHA256: `${{ steps.archive.outputs.sha256 }}`
+        files: |
+          ${{ steps.archive.outputs.archive_name }}
+          ${{ steps.archive.outputs.archive_name }}.sha256
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: Checkout homebrew-swiftcapture repository
+      uses: actions/checkout@v4
+      with:
+        repository: GlennWong/homebrew-swiftcapture
+        token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        path: homebrew-tap
+        
+    - name: Update Homebrew formula in tap repository
+      run: |
+        # Copy the updated formula to the tap repository
+        cp swiftcapture.rb homebrew-tap/Formula/swiftcapture.rb
+        
+        # Configure git
+        cd homebrew-tap
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        
+        # Commit and push changes
+        git add Formula/swiftcapture.rb
+        git commit -m "Update SwiftCapture to v${{ steps.version.outputs.version }}"
+        git push origin main
+        
+    - name: Upload formula as artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: homebrew-formula
+        path: swiftcapture.rb
