@@ -20,14 +20,18 @@ echo -e "${YELLOW}1️⃣ 构建项目和基础验证...${NC}"
 swift build -c release
 BINARY=".build/release/SwiftCapture"
 
-# 2. 核心功能测试 - 信息查询命令
+# 2. 最重要的
+$BINARY --fps 60 --screen 1 --area 0:74:1417:1890 --duration 10000 --output ./screen-1.mp4 --force
+$BINARY --fps 60 --screen 2 --area 0:0:1620:2160 --duration 5000 --output ./screen-2.mp4 --force
+
+# 3. 核心功能测试 - 信息查询命令
 echo -e "${YELLOW}2️⃣ 测试信息查询功能...${NC}"
 $BINARY --version
 $BINARY --help | head -20
 $BINARY --screen-list
 $BINARY --app-list | head -10
 
-# 3. 预设管理功能测试
+# 4. 预设管理功能测试
 echo -e "${YELLOW}3️⃣ 测试预设管理功能...${NC}"
 $BINARY --save-preset "test-preset" --duration 5000 --quality high --fps 30
 $BINARY --list-presets
@@ -35,17 +39,17 @@ $BINARY --preset "test-preset" --output test-preset-recording.mov --duration 300
 sleep 5 && pkill -f SwiftCapture || true
 $BINARY --delete-preset "test-preset"
 
-# 4. 综合录制功能测试 - 一个命令测试多个功能
+# 5. 综合录制功能测试 - 一个命令测试多个功能
 echo -e "${YELLOW}4️⃣ 综合录制功能测试...${NC}"
 $BINARY --screen 1 --area center:800:600 --duration 5000 --quality medium --fps 30 --countdown 3 --show-cursor --output comprehensive-test.mov &
 sleep 8 && pkill -f SwiftCapture || true
 
-# 5. 应用录制和音频功能测试
+# 6. 应用录制和音频功能测试
 echo -e "${YELLOW}5️⃣ 应用录制和音频功能测试...${NC}"
 $BINARY --app Finder --enable-microphone --duration 3000 --audio-quality high --output app-audio-test.mov &
 sleep 5 && pkill -f SwiftCapture || true
 
-# 6. 运行单元测试
+# 7. 运行单元测试
 echo -e "${YELLOW}6️⃣ 运行单元测试...${NC}"
 swift test
 
