@@ -1,6 +1,7 @@
 import Foundation
 import CoreGraphics
 import ScreenCaptureKit
+import IOKit.graphics
 
 /// Manages display detection, selection, and screen information
 class DisplayManager {
@@ -159,9 +160,60 @@ class DisplayManager {
     /// - Parameter displayID: Core Graphics display ID
     /// - Returns: Display name if available
     private func getIODisplayName(for displayID: CGDirectDisplayID) -> String? {
-        // For modern macOS, we'll use a simpler approach
-        // The IOKit method is deprecated and no longer reliable
-        return nil
+        // Get the display mode for resolution info
+        guard let mode = CGDisplayCopyDisplayMode(displayID) else { return nil }
+        
+        // Get basic display information
+        let width = mode.pixelWidth
+        let height = mode.pixelHeight
+        let refreshRate = mode.refreshRate
+        let scaleFactor = getDisplayScaleFactor(for: displayID)
+        
+        // Get additional display properties
+        let isActive = CGDisplayIsActive(displayID) == 1
+        let isAsleep = CGDisplayIsAsleep(displayID) == 1
+        let isBuiltin = CGDisplayIsBuiltin(displayID) == 1
+        let isMain = displayID == CGMainDisplayID()
+        let isOnline = CGDisplayIsOnline(displayID) == 1
+        let isStereo = CGDisplayIsStereo(displayID) == 1
+        let rotation = CGDisplayRotation(displayID)
+        
+        // Build detailed display info
+        var details = [String]()
+        details.append("\n    - ")
+        details.append(isBuiltin ? "Built-in Display" : "External Display")
+        details.append("\n    - ")
+        details.append("\(width)x\(height)")
+        details.append("\n    - ")
+        details.append("@\(Int(refreshRate))Hz")
+        details.append("\n    - ")
+        details.append("(\(String(format: "%.1fx", scaleFactor)) scale)")
+        if rotation != 0 {
+            details.append("\n    - ")
+            details.append("Rotation: \(Int(rotation))°")
+        }
+        if isStereo {
+            details.append("\n    - ")
+            details.append("3D")
+        }
+        if isMain {
+            details.append("\n    - ")
+            details.append("Primary")
+        }
+        if !isActive {
+            details.append("\n    - ")
+            details.append("Inactive")
+        }
+        if !isOnline {
+            details.append("\n    - ")
+            details.append("Offline")
+        }
+        if isAsleep {
+            details.append("\n    - ")
+            details.append("Asleep")
+        }
+        
+        return details.joined()
     }
     
     /// Gets the display scale factor for a given display ID
