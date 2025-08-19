@@ -32,20 +32,42 @@ echo -e "${YELLOW}📋 Building SwiftCapture v$VERSION${NC}"
 echo -e "${YELLOW}📝 Updating release configuration...${NC}"
 jq ".version = \"$VERSION\"" release-config.json > tmp.json && mv tmp.json release-config.json
 
-# Build release
-echo -e "${YELLOW}🔨 Building release binary...${NC}"
-swift build -c release --disable-sandbox
+# Build release for both architectures
+echo -e "${YELLOW}🔨 Building universal binary (Intel + Apple Silicon)...${NC}"
 
-# Check if build was successful
-if [ ! -f ".build/release/SwiftCapture" ]; then
-    echo -e "${RED}❌ Build failed: Binary not found${NC}"
+# Build for arm64 (Apple Silicon)
+echo -e "${YELLOW}  📱 Building for arm64 (Apple Silicon)...${NC}"
+swift build -c release --disable-sandbox --arch arm64
+
+# Build for x86_64 (Intel)
+echo -e "${YELLOW}  💻 Building for x86_64 (Intel)...${NC}"
+swift build -c release --disable-sandbox --arch x86_64
+
+# Check if both builds were successful
+if [ ! -f ".build/arm64-apple-macosx/release/SwiftCapture" ]; then
+    echo -e "${RED}❌ ARM64 build failed: Binary not found${NC}"
     exit 1
 fi
 
-# Create release directory and copy binary
+if [ ! -f ".build/x86_64-apple-macosx/release/SwiftCapture" ]; then
+    echo -e "${RED}❌ x86_64 build failed: Binary not found${NC}"
+    exit 1
+fi
+
+# Create universal binary using lipo
+echo -e "${YELLOW}  🔗 Creating universal binary...${NC}"
 mkdir -p release
-cp .build/release/SwiftCapture release/scap
+lipo -create \
+    .build/arm64-apple-macosx/release/SwiftCapture \
+    .build/x86_64-apple-macosx/release/SwiftCapture \
+    -output release/scap
+
 chmod +x release/scap
+
+# Verify universal binary
+echo -e "${YELLOW}🔍 Verifying universal binary...${NC}"
+file release/scap
+lipo -info release/scap
 
 # Test the binary
 echo -e "${YELLOW}🧪 Testing binary...${NC}"
@@ -93,13 +115,14 @@ chmod +x release/install.sh
 
 # Create README
 cat > release/README.txt << EOF
-SwiftCapture v${VERSION} - Release Package
-==========================================
+SwiftCapture v${VERSION} - Release Package (Universal Binary)
+=============================================================
 
 Professional screen recording tool for macOS with comprehensive CLI interface.
+This is a Universal Binary that supports both Intel and Apple Silicon Macs.
 
 Files:
-- scap: The main executable
+- scap: The main executable (Universal Binary)
 - install.sh: Installation script
 - README.txt: This file
 
@@ -112,7 +135,8 @@ Manual Installation:
 2. Grant Screen Recording permission in System Preferences
 
 System Requirements:
-- macOS 12.3 or later
+- macOS 12.3 (Monterey) or later
+- Intel or Apple Silicon Mac (Universal Binary)
 - Screen Recording permission
 - Microphone permission (optional)
 
@@ -139,14 +163,14 @@ echo "$SHA256  $ARCHIVE_NAME" > "${ARCHIVE_NAME}.sha256"
 echo -e "${YELLOW}📝 Updating Homebrew formula...${NC}"
 cat > swiftcapture.rb << EOF
 class Swiftcapture < Formula
-  desc "Professional screen recording tool for macOS with comprehensive CLI interface"
+  desc "Professional screen recording tool for macOS with comprehensive CLI interface (Universal Binary)"
   homepage "https://github.com/GlennWong/SwiftCapture"
   url "https://github.com/GlennWong/SwiftCapture/releases/download/v${VERSION}/scap-v${VERSION}-macos.tar.gz"
   sha256 "${SHA256}"
   license "MIT"
   version "${VERSION}"
 
-  # System requirements
+  # System requirements - Universal Binary supports both Intel and Apple Silicon
   depends_on :macos => :monterey # macOS 12.3+
   depends_on arch: [:arm64, :x86_64]
 

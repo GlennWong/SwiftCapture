@@ -38,7 +38,7 @@ jobs:
         # Update version in SwiftCaptureCommand.swift
         sed -i '' -E "s/version: \"[0-9]+\.[0-9]+\.[0-9]+\"/version: \"$VERSION\"/" Sources/SwiftCapture/CLI/SwiftCaptureCommand.swift
         
-    - name: Build release and update formula
+    - name: Build universal binary and update formula
       run: |
         chmod +x scripts/release-automation.sh
         ./scripts/release-automation.sh ${{ steps.version.outputs.version }}
@@ -62,7 +62,9 @@ jobs:
           
           Professional screen recording tool for macOS with comprehensive CLI interface.
           
-          ### Installation via Homebrew
+          **🎉 Universal Binary**: This release includes a universal binary that supports both Intel and Apple Silicon Macs!
+          
+          ### Installation via Homebrew (Recommended)
           ```bash
           brew tap GlennWong/swiftcapture
           brew install swiftcapture
@@ -75,6 +77,7 @@ jobs:
           
           ### System Requirements
           - macOS 12.3 (Monterey) or later
+          - Intel or Apple Silicon Mac (Universal Binary)
           - Screen Recording permission
           - Microphone permission (optional)
           
