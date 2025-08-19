@@ -1,6 +1,6 @@
 {
   "name": "SwiftCapture",
-  "version": "2.1.11",
+  "version": "2.1.9",
   "description": "Professional screen recording tool for macOS with comprehensive CLI interface",
   "homepage": "https://github.com/GlennWong/SwiftCapture",
   "license": "MIT",
@@ -15,47 +15,71 @@
     "swift_minimum": "5.6",
     "frameworks": [
       "ScreenCaptureKit",
-      "AVFoundation", 
+      "AVFoundation",
       "CoreMedia",
       "AppKit"
     ]
   },
   "build": {
     "configuration": "release",
-    "architectures": ["arm64", "x86_64"],
+    "architectures": [
+      "arm64",
+      "x86_64"
+    ],
     "optimization": "speed",
     "strip_symbols": true,
     "binary_name": "scap",
-    "output_formats": ["binary", "archive"]
+    "output_formats": [
+      "binary",
+      "archive"
+    ]
   },
   "homebrew": {
     "formula_name": "swiftcapture",
     "tap_name": "GlennWong/swiftcapture",
     "dependencies": {
-      "build": ["xcode"],
+      "build": [
+        "xcode"
+      ],
       "runtime": []
     },
     "test_commands": [
       "--version",
-      "--help", 
+      "--help",
       "--screen-list",
       "--app-list",
       "--list-presets"
     ]
   },
   "distribution": {
-    "platforms": ["macos"],
-    "channels": ["homebrew", "github_releases", "manual"],
-    "archive_formats": ["tar.gz", "zip"],
-    "checksums": ["sha256", "sha512"]
+    "platforms": [
+      "macos"
+    ],
+    "channels": [
+      "homebrew",
+      "github_releases",
+      "manual"
+    ],
+    "archive_formats": [
+      "tar.gz",
+      "zip"
+    ],
+    "checksums": [
+      "sha256",
+      "sha512"
+    ]
   },
   "permissions": {
-    "required": ["screen_recording"],
-    "optional": ["microphone"]
+    "required": [
+      "screen_recording"
+    ],
+    "optional": [
+      "microphone"
+    ]
   },
   "features": [
     "Multi-screen support",
-    "Application window recording", 
+    "Application window recording",
     "Audio recording with microphone",
     "Flexible area selection",
     "Quality controls (fps, bitrate)",
