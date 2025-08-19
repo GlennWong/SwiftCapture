@@ -13,6 +13,8 @@ struct HelpFormatter {
       scap -f -o video.mov --duration 5000              # Short form: force overwrite
       scap --area 0:0:1920:1080 --screen 2             # Record specific area on second screen
       scap --app Safari --duration 15000                # Record Safari for 15 seconds
+      scap --screen-list --json                         # List screens in JSON format
+      scap --app-list --json                            # List applications in JSON format
     
     OUTPUT FORMAT:
       • Always outputs high-quality MOV format (macOS native)
@@ -23,6 +25,7 @@ struct HelpFormatter {
       • Use --screen-list to identify available displays
       • Use --app-list to see recordable applications  
       • Use --list-presets to see saved configurations
+      • Add --json to list commands for programmatic output
       • Use --force (-f) to skip file conflict prompts
       • Check system permissions in System Preferences > Security & Privacy
     """

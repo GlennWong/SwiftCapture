@@ -25,36 +25,48 @@ class ApplicationManager {
     
     /// Lists all running applications with their information
     /// Requirement 6.1: Display all running applications with their identifiers
-    func listApplications() throws {
+    /// - Parameter jsonOutput: Whether to output in JSON format
+    func listApplications(jsonOutput: Bool = false) throws {
         let applications = try getAllApplications()
         
         if applications.isEmpty {
-            throw ApplicationError.noRunningApplications
+            if jsonOutput {
+                let output = ApplicationListJSON(applications: [])
+                print(try output.toJSONString())
+            } else {
+                throw ApplicationError.noRunningApplications
+            }
+            return
         }
         
-        print("Available Applications:")
-        print("======================")
-        
-        for (index, app) in applications.enumerated() {
-            let windowCount = app.windows.count
-            let windowText = windowCount == 1 ? "window" : "windows"
-            print("\(index + 1). \(app.name)")
-            print("   Bundle ID: \(app.bundleIdentifier)")
-            print("   Process ID: \(app.processID)")
-            print("   Windows: \(windowCount) \(windowText)")
+        if jsonOutput {
+            let output = ApplicationListJSON(applications: applications)
+            print(try output.toJSONString())
+        } else {
+            print("Available Applications:")
+            print("======================")
             
-            // Show window details if there are windows
-            if !app.windows.isEmpty {
-                for window in app.windows.prefix(3) { // Show first 3 windows
-                    let size = "\(Int(window.frame.width))x\(Int(window.frame.height))"
-                    let status = window.isOnScreen ? "visible" : "hidden"
-                    print("     - \(window.title.isEmpty ? "Untitled" : window.title) (\(size), \(status))")
+            for (index, app) in applications.enumerated() {
+                let windowCount = app.windows.count
+                let windowText = windowCount == 1 ? "window" : "windows"
+                print("\(index + 1). \(app.name)")
+                print("   Bundle ID: \(app.bundleIdentifier)")
+                print("   Process ID: \(app.processID)")
+                print("   Windows: \(windowCount) \(windowText)")
+                
+                // Show window details if there are windows
+                if !app.windows.isEmpty {
+                    for window in app.windows.prefix(3) { // Show first 3 windows
+                        let size = "\(Int(window.frame.width))x\(Int(window.frame.height))"
+                        let status = window.isOnScreen ? "visible" : "hidden"
+                        print("     - \(window.title.isEmpty ? "Untitled" : window.title) (\(size), \(status))")
+                    }
+                    if app.windows.count > 3 {
+                        print("     ... and \(app.windows.count - 3) more")
+                    }
                 }
-                if app.windows.count > 3 {
-                    print("     ... and \(app.windows.count - 3) more")
-                }
+                print()
             }
-            print()
         }
     }
     

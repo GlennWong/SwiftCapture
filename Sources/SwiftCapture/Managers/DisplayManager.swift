@@ -8,19 +8,30 @@ class DisplayManager {
     
     /// Lists all available screens to the console
     /// Used for the --screen-list command
-    func listScreens() throws {
+    /// - Parameter jsonOutput: Whether to output in JSON format
+    func listScreens(jsonOutput: Bool = false) throws {
         let screens = try getAllScreens()
         
         if screens.isEmpty {
-            print("No screens detected.")
+            if jsonOutput {
+                let output = ScreenListJSON(screens: [])
+                print(try output.toJSONString())
+            } else {
+                print("No screens detected.")
+            }
             return
         }
         
-        print("Available screens:")
-        for screen in screens {
-            print("  \(screen)")
+        if jsonOutput {
+            let output = ScreenListJSON(screens: screens)
+            print(try output.toJSONString())
+        } else {
+            print("Available screens:")
+            for screen in screens {
+                print("  \(screen)")
+            }
+            print("")
         }
-        print("")
     }
     
     /// Gets information for a specific screen by index
@@ -170,50 +181,22 @@ class DisplayManager {
         let scaleFactor = getDisplayScaleFactor(for: displayID)
         
         // Get additional display properties
-        let isActive = CGDisplayIsActive(displayID) == 1
-        let isAsleep = CGDisplayIsAsleep(displayID) == 1
         let isBuiltin = CGDisplayIsBuiltin(displayID) == 1
         let isMain = displayID == CGMainDisplayID()
-        let isOnline = CGDisplayIsOnline(displayID) == 1
-        let isStereo = CGDisplayIsStereo(displayID) == 1
-        let rotation = CGDisplayRotation(displayID)
         
-        // Build detailed display info
-        var details = [String]()
-        details.append("\n    - ")
-        details.append(isBuiltin ? "Built-in Display" : "External Display")
-        details.append("\n    - ")
-        details.append("\(width)x\(height)")
-        details.append("\n    - ")
-        details.append("@\(Int(refreshRate))Hz")
-        details.append("\n    - ")
-        details.append("(\(String(format: "%.1fx", scaleFactor)) scale)")
-        if rotation != 0 {
-            details.append("\n    - ")
-            details.append("Rotation: \(Int(rotation))°")
-        }
-        if isStereo {
-            details.append("\n    - ")
-            details.append("3D")
-        }
+        // Build clean display name for both text and JSON output
+        let baseType = isBuiltin ? "Built-in Display" : "External Display"
+        let resolution = "\(width)x\(height)"
+        let refresh = "@\(Int(refreshRate))Hz"
+        let scale = "(\(String(format: "%.1fx", scaleFactor)) scale)"
+        
+        var components = [baseType, resolution, refresh, scale]
+        
         if isMain {
-            details.append("\n    - ")
-            details.append("Primary")
-        }
-        if !isActive {
-            details.append("\n    - ")
-            details.append("Inactive")
-        }
-        if !isOnline {
-            details.append("\n    - ")
-            details.append("Offline")
-        }
-        if isAsleep {
-            details.append("\n    - ")
-            details.append("Asleep")
+            components.append("Primary")
         }
         
-        return details.joined()
+        return components.joined(separator: " - ")
     }
     
     /// Gets the display scale factor for a given display ID

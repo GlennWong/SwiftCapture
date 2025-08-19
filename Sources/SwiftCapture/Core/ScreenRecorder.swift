@@ -283,15 +283,17 @@ class ScreenRecorder {
     // MARK: - List Operations
     
     /// List available screens
+    /// - Parameter jsonOutput: Whether to output in JSON format
     /// - Throws: Error if screen listing fails
-    func listScreens() throws {
-        try displayManager.listScreens()
+    func listScreens(jsonOutput: Bool = false) throws {
+        try displayManager.listScreens(jsonOutput: jsonOutput)
     }
     
     /// List available applications
+    /// - Parameter jsonOutput: Whether to output in JSON format
     /// - Throws: Error if application listing fails
-    func listApplications() throws {
-        try applicationManager.listApplications()
+    func listApplications(jsonOutput: Bool = false) throws {
+        try applicationManager.listApplications(jsonOutput: jsonOutput)
     }
     
     // MARK: - Validation Methods

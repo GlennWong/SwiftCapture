@@ -92,6 +92,10 @@ struct SwiftCaptureCommand: AsyncParsableCommand {
     @Option(help: "Delete a saved preset")
     var deletePreset: String?
     
+    // MARK: - Output Format Options
+    @Flag(help: "Output list results in JSON format for programmatic use")
+    var json: Bool = false
+    
     // MARK: - Validation
     func validate() throws {
         // Check system requirements first
@@ -252,6 +256,14 @@ struct SwiftCaptureCommand: AsyncParsableCommand {
                     suggestion: "Use list operations alone to view available options, then run recording command separately"
                 )
             }
+        }
+        
+        // Check if --json is used without list operations
+        if json && !screenList && !appList && !listPresets {
+            throw ValidationError(
+                "The --json flag can only be used with list operations.",
+                suggestion: "Use --json with --screen-list, --app-list, or --list-presets"
+            )
         }
         
         // Check if preset deletion is used with other options
@@ -463,49 +475,64 @@ struct SwiftCaptureCommand: AsyncParsableCommand {
     private func handleScreenList() async throws {
         if #available(macOS 12.3, *) {
             let recorder = ScreenRecorder()
-            try recorder.listScreens()
+            try recorder.listScreens(jsonOutput: json)
         } else {
             throw ValidationError.systemRequirementsNotMet()
         }
         
-        // Show usage examples after listing screens
-        print("")
-        print("USAGE:")
-        print("  scap --screen 1                          # Record primary display")
-        print("  scap --screen 2                          # Record secondary display")
-        print("  scap --screen 1 --area 0:0:1920:1080     # Record specific area")
+        // Show usage examples after listing screens (only for non-JSON output)
+        if !json {
+            print("")
+            print("USAGE:")
+            print("  scap --screen 1                          # Record primary display")
+            print("  scap --screen 2                          # Record secondary display")
+            print("  scap --screen 1 --area 0:0:1920:1080     # Record specific area")
+        }
     }
     
     private func handleAppList() async throws {
         if #available(macOS 12.3, *) {
             let recorder = ScreenRecorder()
-            try recorder.listApplications()
+            try recorder.listApplications(jsonOutput: json)
         } else {
             throw ValidationError.systemRequirementsNotMet()
         }
         
-        // Show usage examples after listing applications
-        print("")
-        print("USAGE:")
-        print("  scap --app Safari                        # Record Safari windows")
-        print("  scap --app \"Final Cut Pro\"             # Record app with spaces")
-        print("  scap --app Terminal --duration 15000     # Record for 15 seconds")
+        // Show usage examples after listing applications (only for non-JSON output)
+        if !json {
+            print("")
+            print("USAGE:")
+            print("  scap --app Safari                        # Record Safari windows")
+            print("  scap --app \"Final Cut Pro\"             # Record app with spaces")
+            print("  scap --app Terminal --duration 15000     # Record for 15 seconds")
+        }
     }
     
     private func handleListPresets() async throws {
         do {
             let configManager = try ConfigurationManager()
-            try configManager.listPresets()
+            try configManager.listPresets(jsonOutput: json)
         } catch {
-            print("❌ Error listing presets: \(error.localizedDescription)")
+            if json {
+                // For JSON output, print error as JSON
+                let errorOutput = ["error": error.localizedDescription]
+                if let jsonData = try? JSONSerialization.data(withJSONObject: errorOutput, options: .prettyPrinted),
+                   let jsonString = String(data: jsonData, encoding: .utf8) {
+                    print(jsonString)
+                }
+            } else {
+                print("❌ Error listing presets: \(error.localizedDescription)")
+            }
         }
         
-        // Show usage examples after listing presets
-        print("")
-        print("USAGE:")
-        print("  scap --save-preset \"meeting\"           # Save current settings")
-        print("  scap --preset \"meeting\"               # Use saved preset")
-        print("  scap --delete-preset \"old-config\"     # Delete preset")
+        // Show usage examples after listing presets (only for non-JSON output)
+        if !json {
+            print("")
+            print("USAGE:")
+            print("  scap --save-preset \"meeting\"           # Save current settings")
+            print("  scap --preset \"meeting\"               # Use saved preset")
+            print("  scap --delete-preset \"old-config\"     # Delete preset")
+        }
     }
     
     private func handleDeletePreset(_ name: String) async throws {

@@ -208,6 +208,129 @@ scap --list-presets
 scap --delete-preset "old-config"
 ```
 
+### JSON Output for Programmatic Use
+
+SwiftCapture supports JSON output for all list operations, making it easy to integrate with scripts and other tools:
+
+```bash
+# Get screen information in JSON format
+scap --screen-list --json
+
+# Get application list in JSON format  
+scap --app-list --json
+
+# Get presets in JSON format
+scap --list-presets --json
+```
+
+#### JSON Output Examples
+
+**Screen List JSON:**
+```json
+{
+  "count": 2,
+  "screens": [
+    {
+      "index": 1,
+      "displayID": 1,
+      "name": "Built-in Display - 3024x1964 - @120Hz - (2.0x scale) - Primary",
+      "isPrimary": true,
+      "scaleFactor": 2.0,
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "width": 1512,
+        "height": 982
+      },
+      "resolution": {
+        "width": 3024,
+        "height": 1964,
+        "pointWidth": 1512,
+        "pointHeight": 982
+      }
+    }
+  ]
+}
+```
+
+**Application List JSON:**
+```json
+{
+  "count": 1,
+  "applications": [
+    {
+      "name": "Safari",
+      "bundleIdentifier": "com.apple.Safari",
+      "processID": 1234,
+      "isRunning": true,
+      "windowCount": 2,
+      "windows": [
+        {
+          "windowID": 567,
+          "title": "SwiftCapture Documentation",
+          "frame": {
+            "x": 100,
+            "y": 100,
+            "width": 1200,
+            "height": 800
+          },
+          "isOnScreen": true,
+          "size": {
+            "width": 1200,
+            "height": 800,
+            "pointWidth": 1200,
+            "pointHeight": 800
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+**Preset List JSON:**
+```json
+{
+  "count": 1,
+  "presets": [
+    {
+      "name": "meeting",
+      "duration": 30000,
+      "area": null,
+      "screen": 1,
+      "app": null,
+      "enableMicrophone": true,
+      "fps": 30,
+      "quality": "high",
+      "format": "mov",
+      "showCursor": false,
+      "countdown": 0,
+      "audioQuality": "medium",
+      "createdAt": "2025-08-19T12:00:00Z",
+      "lastUsed": null
+    }
+  ]
+}
+```
+
+#### Using JSON Output in Scripts
+
+```bash
+#!/bin/bash
+# Example: Find the primary screen index programmatically
+PRIMARY_SCREEN=$(scap --screen-list --json | jq -r '.screens[] | select(.isPrimary == true) | .index')
+echo "Primary screen index: $PRIMARY_SCREEN"
+
+# Example: Get all Safari windows
+scap --app-list --json | jq -r '.applications[] | select(.name == "Safari") | .windows[].title'
+
+# Example: Check if a preset exists
+PRESET_EXISTS=$(scap --list-presets --json | jq -r '.presets[] | select(.name == "meeting") | .name')
+if [ "$PRESET_EXISTS" = "meeting" ]; then
+    echo "Meeting preset exists"
+fi
+```
+
 ## Examples
 
 ### Quick Recording Scenarios
@@ -288,6 +411,7 @@ scap --preset "tutorial" --duration 60000 --output custom.mov
 | `--screen-list`, `-l` | List available screens with details  |
 | `--app-list`, `-L`    | List running applications            |
 | `--list-presets`      | Show all saved presets               |
+| `--json`              | Output list results in JSON format   |
 
 ### Recording Options
 

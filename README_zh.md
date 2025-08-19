@@ -219,6 +219,129 @@ scap --list-presets
 scap --delete-preset "old-config"
 ```
 
+### JSON 输出用于程序化使用
+
+SwiftCapture 支持所有列表操作的 JSON 输出，便于与脚本和其他工具集成：
+
+```bash
+# 以 JSON 格式获取屏幕信息
+scap --screen-list --json
+
+# 以 JSON 格式获取应用程序列表
+scap --app-list --json
+
+# 以 JSON 格式获取预设
+scap --list-presets --json
+```
+
+#### JSON 输出示例
+
+**屏幕列表 JSON：**
+```json
+{
+  "count": 2,
+  "screens": [
+    {
+      "index": 1,
+      "displayID": 1,
+      "name": "内置显示器 - 3024x1964 - @120Hz - (2.0x scale) - Primary",
+      "isPrimary": true,
+      "scaleFactor": 2.0,
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "width": 1512,
+        "height": 982
+      },
+      "resolution": {
+        "width": 3024,
+        "height": 1964,
+        "pointWidth": 1512,
+        "pointHeight": 982
+      }
+    }
+  ]
+}
+```
+
+**应用程序列表 JSON：**
+```json
+{
+  "count": 1,
+  "applications": [
+    {
+      "name": "Safari",
+      "bundleIdentifier": "com.apple.Safari",
+      "processID": 1234,
+      "isRunning": true,
+      "windowCount": 2,
+      "windows": [
+        {
+          "windowID": 567,
+          "title": "SwiftCapture 文档",
+          "frame": {
+            "x": 100,
+            "y": 100,
+            "width": 1200,
+            "height": 800
+          },
+          "isOnScreen": true,
+          "size": {
+            "width": 1200,
+            "height": 800,
+            "pointWidth": 1200,
+            "pointHeight": 800
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+**预设列表 JSON：**
+```json
+{
+  "count": 1,
+  "presets": [
+    {
+      "name": "meeting",
+      "duration": 30000,
+      "area": null,
+      "screen": 1,
+      "app": null,
+      "enableMicrophone": true,
+      "fps": 30,
+      "quality": "high",
+      "format": "mov",
+      "showCursor": false,
+      "countdown": 0,
+      "audioQuality": "medium",
+      "createdAt": "2025-08-19T12:00:00Z",
+      "lastUsed": null
+    }
+  ]
+}
+```
+
+#### 在脚本中使用 JSON 输出
+
+```bash
+#!/bin/bash
+# 示例：程序化查找主屏幕索引
+PRIMARY_SCREEN=$(scap --screen-list --json | jq -r '.screens[] | select(.isPrimary == true) | .index')
+echo "主屏幕索引: $PRIMARY_SCREEN"
+
+# 示例：获取所有 Safari 窗口
+scap --app-list --json | jq -r '.applications[] | select(.name == "Safari") | .windows[].title'
+
+# 示例：检查预设是否存在
+PRESET_EXISTS=$(scap --list-presets --json | jq -r '.presets[] | select(.name == "meeting") | .name')
+if [ "$PRESET_EXISTS" = "meeting" ]; then
+    echo "会议预设存在"
+fi
+```
+
 ## 使用示例
 
 ### 快速录制场景
@@ -299,6 +422,7 @@ scap --preset "tutorial" --duration 60000 --output custom.mov
 | `--screen-list`, `-l` | 列出可用屏幕及详细信息 |
 | `--app-list`, `-L`    | 列出运行中的应用程序   |
 | `--list-presets`      | 显示所有保存的预设     |
+| `--json`              | 以 JSON 格式输出列表结果 |
 
 ### 录制选项
 

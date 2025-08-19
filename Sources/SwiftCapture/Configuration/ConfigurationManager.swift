@@ -152,58 +152,69 @@ class ConfigurationManager {
     }
     
     /// List all available presets
+    /// - Parameter jsonOutput: Whether to output in JSON format
     /// - Throws: Error if presets cannot be listed
-    func listPresets() throws {
+    func listPresets(jsonOutput: Bool = false) throws {
         let presets = try presetStorage.getAllPresets()
         
         if presets.isEmpty {
-            print("No presets found. Create one with --save-preset <name>")
+            if jsonOutput {
+                let output = PresetListJSON(presets: [])
+                print(try output.toJSONString())
+            } else {
+                print("No presets found. Create one with --save-preset <name>")
+            }
             return
         }
         
-        print("Available presets:")
-        print("==================")
-        
-        for preset in presets {
-            print("\n📋 \(preset.name)")
-            print("   Duration: \(preset.duration)ms")
+        if jsonOutput {
+            let output = PresetListJSON(presets: presets)
+            print(try output.toJSONString())
+        } else {
+            print("Available presets:")
+            print("==================")
             
-            if let area = preset.area {
-                print("   Area: \(area)")
-            } else {
-                print("   Area: Full Screen")
+            for preset in presets {
+                print("\n📋 \(preset.name)")
+                print("   Duration: \(preset.duration)ms")
+                
+                if let area = preset.area {
+                    print("   Area: \(area)")
+                } else {
+                    print("   Area: Full Screen")
+                }
+                
+                print("   Screen: \(preset.screen)")
+                
+                if let app = preset.app {
+                    print("   App: \(app)")
+                }
+                
+                print("   Video: \(preset.fps)fps, \(preset.quality) quality")
+                print("   Audio: \(preset.enableMicrophone ? "microphone + system" : "system only")")
+                print("   Format: \(preset.format.uppercased())")
+                
+                if preset.showCursor {
+                    print("   Cursor: visible")
+                }
+                
+                if preset.countdown > 0 {
+                    print("   Countdown: \(preset.countdown)s")
+                }
+                
+                let dateFormatter = DateFormatter()
+                dateFormatter.dateStyle = .short
+                dateFormatter.timeStyle = .short
+                
+                print("   Created: \(dateFormatter.string(from: preset.createdAt))")
+                
+                if let lastUsed = preset.lastUsed {
+                    print("   Last used: \(dateFormatter.string(from: lastUsed))")
+                }
             }
             
-            print("   Screen: \(preset.screen)")
-            
-            if let app = preset.app {
-                print("   App: \(app)")
-            }
-            
-            print("   Video: \(preset.fps)fps, \(preset.quality) quality")
-            print("   Audio: \(preset.enableMicrophone ? "microphone + system" : "system only")")
-            print("   Format: \(preset.format.uppercased())")
-            
-            if preset.showCursor {
-                print("   Cursor: visible")
-            }
-            
-            if preset.countdown > 0 {
-                print("   Countdown: \(preset.countdown)s")
-            }
-            
-            let dateFormatter = DateFormatter()
-            dateFormatter.dateStyle = .short
-            dateFormatter.timeStyle = .short
-            
-            print("   Created: \(dateFormatter.string(from: preset.createdAt))")
-            
-            if let lastUsed = preset.lastUsed {
-                print("   Last used: \(dateFormatter.string(from: lastUsed))")
-            }
+            print("\nUse --preset <name> to load a preset")
         }
-        
-        print("\nUse --preset <name> to load a preset")
     }
     
     /// Delete a preset
