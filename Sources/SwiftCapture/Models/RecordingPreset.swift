@@ -50,7 +50,13 @@ struct RecordingPreset: Codable {
     ///   - name: Preset name
     init(from configuration: RecordingConfiguration, name: String) {
         self.name = name
-        self.duration = Int(configuration.duration * 1000) // Convert to milliseconds
+        
+        // Handle continuous recording (negative duration)
+        if configuration.duration < 0 {
+            self.duration = -1 // Use -1 to represent continuous recording
+        } else {
+            self.duration = Int(configuration.duration * 1000) // Convert to milliseconds
+        }
         
         // Convert recording area to string representation
         switch configuration.recordingArea {
@@ -129,7 +135,7 @@ struct RecordingPreset: Codable {
         )
         
         return RecordingConfiguration(
-            duration: TimeInterval(duration) / 1000.0, // Convert from milliseconds
+            duration: duration == -1 ? -1.0 : TimeInterval(duration) / 1000.0, // Handle continuous recording
             outputURL: outputURL,
             outputFormat: outputFormat,
             recordingArea: recordingArea,
@@ -147,7 +153,12 @@ extension RecordingPreset: CustomStringConvertible {
         var components: [String] = []
         
         components.append("Name: \(name)")
-        components.append("Duration: \(duration)ms")
+        
+        if duration == -1 {
+            components.append("Duration: Continuous (until Ctrl+C)")
+        } else {
+            components.append("Duration: \(duration)ms")
+        }
         
         if let area = area {
             components.append("Area: \(area)")

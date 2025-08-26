@@ -32,8 +32,13 @@ class ProgressIndicator: @unchecked Sendable {
         // Clear the line and show initial status
         print("🔴 Recording started...")
         print("   Output: \(outputURL.lastPathComponent)")
-        print("   Expected duration: \(formatDuration(expectedDuration))")
-        print("   Press Ctrl+C to stop early")
+        
+        if expectedDuration < 0 {
+            print("   Mode: Continuous recording (press Ctrl+C to stop)")
+        } else {
+            print("   Expected duration: \(formatDuration(expectedDuration))")
+            print("   Press Ctrl+C to stop early")
+        }
         print("")
         
         // Start the progress timer
@@ -94,10 +99,16 @@ class ProgressIndicator: @unchecked Sendable {
         guard isRecording else { return }
         
         let elapsed = startTime.map { Date().timeIntervalSince($0) } ?? 0
-        let remaining = max(0, expectedDuration - elapsed)
         
         clearCurrentLine()
-        print("🔴 \(message) | Elapsed: \(formatDuration(elapsed)) | Remaining: \(formatDuration(remaining))", terminator: "")
+        if expectedDuration < 0 {
+            // Continuous recording mode
+            print("🔴 \(message) | Elapsed: \(formatDuration(elapsed))", terminator: "")
+        } else {
+            // Timed recording mode
+            let remaining = max(0, expectedDuration - elapsed)
+            print("🔴 \(message) | Elapsed: \(formatDuration(elapsed)) | Remaining: \(formatDuration(remaining))", terminator: "")
+        }
         fflush(stdout)
     }
     
@@ -121,22 +132,30 @@ class ProgressIndicator: @unchecked Sendable {
         guard isRecording, let startTime = startTime else { return }
         
         let elapsed = Date().timeIntervalSince(startTime)
-        let remaining = max(0, expectedDuration - elapsed)
-        let progress = min(1.0, elapsed / expectedDuration)
         
-        // Create progress bar
-        let barWidth = 30
-        let filledWidth = Int(progress * Double(barWidth))
-        let progressBar = String(repeating: "█", count: filledWidth) + 
-                         String(repeating: "░", count: barWidth - filledWidth)
-        
-        // Format the progress line
-        let progressLine = String(format: "🔴 Recording [%@] %.1f%% | %@ / %@ | Remaining: %@",
-                                progressBar,
-                                progress * 100,
-                                formatDuration(elapsed),
-                                formatDuration(expectedDuration),
-                                formatDuration(remaining))
+        let progressLine: String
+        if expectedDuration < 0 {
+            // Continuous recording mode - no progress bar or remaining time
+            progressLine = String(format: "🔴 Recording... | Elapsed: %@ (press Ctrl+C to stop)",
+                                formatDuration(elapsed))
+        } else {
+            // Timed recording mode - show progress bar and remaining time
+            let remaining = max(0, expectedDuration - elapsed)
+            let progress = min(1.0, elapsed / expectedDuration)
+            
+            // Create progress bar
+            let barWidth = 30
+            let filledWidth = Int(progress * Double(barWidth))
+            let progressBar = String(repeating: "█", count: filledWidth) + 
+                             String(repeating: "░", count: barWidth - filledWidth)
+            
+            progressLine = String(format: "🔴 Recording [%@] %.1f%% | %@ / %@ | Remaining: %@",
+                                    progressBar,
+                                    progress * 100,
+                                    formatDuration(elapsed),
+                                    formatDuration(expectedDuration),
+                                    formatDuration(remaining))
+        }
         
         // Update the display on main queue
         DispatchQueue.main.sync {

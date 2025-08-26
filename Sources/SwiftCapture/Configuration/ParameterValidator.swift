@@ -10,9 +10,12 @@ class ParameterValidator {
     }
     
     /// Validate recording duration
-    /// - Parameter duration: Duration in milliseconds
+    /// - Parameter duration: Duration in milliseconds (optional - nil means continuous recording)
     /// - Throws: ValidationError if invalid
-    func validateDuration(_ duration: Int) throws {
+    func validateDuration(_ duration: Int?) throws {
+        // If duration is nil, it means continuous recording - this is valid
+        guard let duration = duration else { return }
+        
         guard duration >= 100 else {
             throw ValidationError.invalidDuration(duration)
         }

@@ -11,13 +11,13 @@ struct SwiftCaptureCommand: AsyncParsableCommand {
         commandName: "scap",
         abstract: "Professional screen recording tool for macOS using ScreenCaptureKit",
         discussion: HelpFormatter.usageExamples,
-        version: "2.1.11",
+        version: "2.2.0",
         helpNames: [.short, .long, .customLong("help")]
     )
     
     // MARK: - Duration Control
-    @Option(name: [.short, .long], help: "Recording duration in milliseconds (default: 10000)")
-    var duration: Int = 10000
+    @Option(name: [.short, .long], help: "Recording duration in milliseconds (optional - continuous recording if not specified)")
+    var duration: Int?
     
     // MARK: - Output Options
     @Option(name: [.short, .long], help: ArgumentHelp(
@@ -117,7 +117,8 @@ struct SwiftCaptureCommand: AsyncParsableCommand {
     }
     
     private func validateDuration() throws {
-        if duration < 100 {
+        // If duration is nil, it means continuous recording mode - this is valid
+        if let duration = duration, duration < 100 {
             throw ValidationError.invalidDuration(duration)
         }
     }
@@ -245,7 +246,7 @@ struct SwiftCaptureCommand: AsyncParsableCommand {
         
         // Check if recording options are used with list operations
         if screenList || appList || listPresets {
-            let hasRecordingOptions = duration != 10000 || output != nil || area != nil || 
+            let hasRecordingOptions = duration != nil || output != nil || area != nil || 
                                     screen != 1 || app != nil || enableMicrophone || 
                                     fps != 30 || quality != "medium" || 
                                     audioQuality != "medium" || showCursor || countdown != 0 || force
@@ -268,7 +269,7 @@ struct SwiftCaptureCommand: AsyncParsableCommand {
         
         // Check if preset deletion is used with other options
         if deletePreset != nil {
-            let hasOtherOptions = duration != 10000 || output != nil || area != nil || 
+            let hasOtherOptions = duration != nil || output != nil || area != nil || 
                                 screen != 1 || app != nil || enableMicrophone || 
                                 fps != 30 || quality != "medium" || 
                                 audioQuality != "medium" || showCursor || countdown != 0 || force || savePreset != nil || preset != nil
@@ -312,7 +313,7 @@ struct SwiftCaptureCommand: AsyncParsableCommand {
         }
         
         // Validate reasonable duration limits (warn for very long recordings)
-        if duration > 3600000 { // 1 hour
+        if let duration = duration, duration > 3600000 { // 1 hour
             throw ValidationError(
                 "Duration very long: \(duration)ms (\(duration/60000) minutes). This may create very large files.",
                 suggestion: "Consider shorter recordings or use --quality low to reduce file size"
@@ -562,7 +563,11 @@ struct SwiftCaptureCommand: AsyncParsableCommand {
             
             print("")
             print("📋 Preset '\(name)' saved with the following settings:")
-            print("   Duration: \(duration)ms")
+            if let duration = duration {
+                print("   Duration: \(duration)ms")
+            } else {
+                print("   Duration: Continuous (until Ctrl+C)")
+            }
             print("   Screen: \(screen)")
             if let area = area {
                 print("   Area: \(area)")

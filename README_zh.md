@@ -51,28 +51,17 @@ brew install swiftcapture
 ## 快速开始
 
 ```bash
-swift run SwiftCapture --duration 60000 -o ./60000-final.mov
-swift run SwiftCapture --duration 120000 -o ./120000-final.mov
-swift run SwiftCapture --duration 300000 -o ./300000-final.mov
-swift run SwiftCapture --duration 420000 -o ./420000-final.mov
-
-还是有问题：
-
-swift run SwiftCapture --duration 420000 -o ./420000-2.mov
-
-我希望录制7分钟的视频，结果生成的视频只有几秒钟。
-
-# 基本 10 秒录制
+# 连续录制（默认）- 按 Ctrl+C 停止
 scap
 
-# 录制 30 秒
-scap --duration 30000
-
-# 录制到指定文件
+# 连续录制，自定义输出
 scap --output ~/Desktop/demo.mov
 
-# 录制时包含麦克风音频
-scap --enable-microphone --duration 15000
+# 定时录制 30 秒
+scap --duration 30000
+
+# 录制时包含麦克风音频（连续）
+scap --enable-microphone
 ```
 
 ## 使用方法
@@ -86,10 +75,16 @@ scap [选项]
 ### 持续时间控制
 
 ```bash
-# 录制指定持续时间（毫秒）
+# 连续录制（默认）- 不指定持续时间
+scap                          # 录制直到按 Ctrl+C
+scap --output video.mov       # 连续录制，自定义输出
+
+# 定时录制 - 指定持续时间（毫秒）
 scap --duration 5000          # 5 秒
-scap -d 30000                  # 30 秒（短标志）
-scap --duration 120000         # 2 分钟
+scap -d 30000                 # 30 秒（短标志）
+scap --duration 120000        # 2 分钟
+
+# 两种模式都支持使用 Ctrl+C 提前结束
 ```
 
 ### 输出文件管理
@@ -347,14 +342,17 @@ fi
 ### 快速录制场景
 
 ```bash
-# 快速 10 秒屏幕录制
-scap
+# 连续屏幕录制（默认）
+scap                          # 录制直到按 Ctrl+C
 
-# 30 秒演示录制，带倒计时
+# 连续录制，自定义设置
+scap --output ~/Desktop/demo.mov --quality high
+
+# 30 秒定时录制，带倒计时
 scap --duration 30000 --countdown 3 --show-cursor
 
-# 高质量应用程序演示
-scap --app Safari --duration 60000 --quality high --fps 60 \
+# 高质量应用程序演示（连续）
+scap --app Safari --quality high --fps 60 \
                --output ~/Desktop/safari-demo.mov
 ```
 
@@ -377,12 +375,15 @@ scap --screen 2 --area center:1920:1080  # 在任何屏幕尺寸上自动居中
 ### 音频录制
 
 ```bash
-# 录制教程时包含麦克风
-scap --enable-microphone --duration 300000 --quality high \
+# 录制教程时包含麦克风（连续）
+scap --enable-microphone --quality high \
                --show-cursor --countdown 5
 
-# 高质量音频录制
+# 高质量连续音频录制
 scap --enable-microphone --audio-quality high --quality high
+
+# 定时麦克风录制
+scap --enable-microphone --duration 300000 --quality high
 ```
 
 ### 预设工作流
@@ -428,7 +429,7 @@ scap --preset "tutorial" --duration 60000 --output custom.mov
 
 | 选项         | 短标志 | 描述                                                | 默认值         |
 | ------------ | ------ | --------------------------------------------------- | -------------- |
-| `--duration` | `-d`   | 录制持续时间（毫秒）                                | 10000（10 秒） |
+| `--duration` | `-d`   | 录制持续时间（毫秒，可选）                                | 连续       |
 | `--output`   | `-o`   | 输出文件路径                                        | 带时间戳的文件 |
 | `--screen`   | `-s`   | 要录制的屏幕索引                                    | 1（主屏幕）    |
 | `--area`     | `-a`   | 录制区域（x:y:width:height 或 center:width:height） | 全屏           |
@@ -728,6 +729,32 @@ done
 scap --duration 30000 --quality high --output temp_recording.mov
 ffmpeg -i temp_recording.mov -vf "scale=1280:720" final_recording.mov
 rm temp_recording.mov
+```
+
+## 最新更新
+
+### 连续录制修复 (v2.2.0)
+
+**已修复**：连续录制模式中使用 Ctrl+C 停止时文件损坏的关键问题。
+
+**问题**：之前，当使用连续录制（不指定 `--duration` 的默认模式）时，按 Ctrl+C 停止录制会导致 MOV 文件损坏，出现 "moov atom not found" 错误。文件无法播放或由 ffmpeg 等视频工具处理。
+
+**解决方案**：实现了使用信号量协调的同步文件最终化，确保在进程退出前正确关闭 MOV 文件。
+
+**影响**：
+- ✅ 连续录制现在生成与所有视频播放器和工具兼容的有效 MOV 文件
+- ✅ 连续和定时录制模式都工作正常
+- ✅ 文件可以使用 `ffmpeg -i 文件名.mov` 验证，无错误
+- ✅ 优雅关闭，带有适当的进度指示器和文件统计信息
+
+**使用方法**：
+```bash
+# 连续录制（现在完全可用）
+scap                    # 开始录制，按 Ctrl+C 停止
+scap --output demo.mov  # 连续录制，自定义输出
+
+# 在录制后验证文件完整性
+ffmpeg -i demo.mov -hide_banner  # 应该显示有效的视频/音频流
 ```
 
 ## 技术规格

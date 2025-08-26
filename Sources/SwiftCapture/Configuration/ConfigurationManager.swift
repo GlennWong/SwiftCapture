@@ -32,6 +32,14 @@ class ConfigurationManager {
         // Validate individual parameters
         try validator.validateDuration(command.duration)
         
+        // Convert duration: nil means continuous recording (represented as -1.0)
+        let durationSeconds: TimeInterval
+        if let durationMs = command.duration {
+            durationSeconds = TimeInterval(durationMs) / 1000.0 // Convert from milliseconds
+        } else {
+            durationSeconds = -1.0 // Special value indicating continuous recording
+        }
+        
         let recordingArea: RecordingArea
         if let areaString = command.area {
             recordingArea = try validator.validateArea(areaString)
@@ -113,7 +121,7 @@ class ConfigurationManager {
         
         // Create final configuration
         let configuration = RecordingConfiguration(
-            duration: TimeInterval(command.duration) / 1000.0, // Convert from milliseconds
+            duration: durationSeconds, // Use converted duration (may be -1.0 for continuous)
             outputURL: outputURL,
             outputFormat: outputFormat,
             recordingArea: recordingArea,
@@ -176,7 +184,12 @@ class ConfigurationManager {
             
             for preset in presets {
                 print("\n📋 \(preset.name)")
-                print("   Duration: \(preset.duration)ms")
+                
+                if preset.duration == -1 {
+                    print("   Duration: Continuous (until Ctrl+C)")
+                } else {
+                    print("   Duration: \(preset.duration)ms")
+                }
                 
                 if let area = preset.area {
                     print("   Area: \(area)")

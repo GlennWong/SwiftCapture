@@ -51,17 +51,17 @@ brew install swiftcapture
 ## Quick Start
 
 ```bash
-# Basic 10-second recording
+# Continuous recording (default) - press Ctrl+C to stop
 scap
 
-# Record for 30 seconds
-scap --duration 30000
-
-# Record to specific file
+# Continuous recording with custom output
 scap --output ~/Desktop/demo.mov
 
-# Record with microphone audio
-scap --enable-microphone --duration 15000
+# Timed recording for 30 seconds
+scap --duration 30000
+
+# Record with microphone audio (continuous)
+scap --enable-microphone
 ```
 
 ## Usage
@@ -75,10 +75,16 @@ scap [OPTIONS]
 ### Duration Control
 
 ```bash
-# Record for specific duration (in milliseconds)
+# Continuous recording (default) - no duration specified
+scap                          # Record until Ctrl+C is pressed
+scap --output video.mov       # Continuous with custom output
+
+# Timed recording - specify duration in milliseconds
 scap --duration 5000          # 5 seconds
-scap -d 30000                  # 30 seconds (short flag)
-scap --duration 120000         # 2 minutes
+scap -d 30000                 # 30 seconds (short flag)
+scap --duration 120000        # 2 minutes
+
+# Both modes support early termination with Ctrl+C
 ```
 
 ### Output File Management
@@ -336,14 +342,17 @@ fi
 ### Quick Recording Scenarios
 
 ```bash
-# Quick 10-second screen capture
-scap
+# Continuous screen recording (default)
+scap                          # Record until Ctrl+C is pressed
 
-# 30-second presentation recording with countdown
+# Continuous recording with custom settings
+scap --output ~/Desktop/demo.mov --quality high
+
+# 30-second timed recording with countdown
 scap --duration 30000 --countdown 3 --show-cursor
 
-# High-quality application demo
-scap --app Safari --duration 60000 --quality high --fps 60 \
+# High-quality application demo (continuous)
+scap --app Safari --quality high --fps 60 \
                --output ~/Desktop/safari-demo.mov
 ```
 
@@ -366,12 +375,15 @@ scap --screen 2 --area center:1920:1080  # Auto-centers on any screen size
 ### Audio Recording
 
 ```bash
-# Record with microphone for tutorials
-scap --enable-microphone --duration 300000 --quality high \
+# Continuous recording with microphone for tutorials
+scap --enable-microphone --quality high \
                --show-cursor --countdown 5
 
-# High-quality audio recording
+# High-quality continuous audio recording
 scap --enable-microphone --audio-quality high --quality high
+
+# Timed recording with microphone
+scap --enable-microphone --duration 300000 --quality high
 ```
 
 ### Preset Workflows
@@ -417,7 +429,7 @@ scap --preset "tutorial" --duration 60000 --output custom.mov
 
 | Option       | Short | Description                                              | Default          |
 | ------------ | ----- | -------------------------------------------------------- | ---------------- |
-| `--duration` | `-d`  | Recording duration in milliseconds                       | 10000 (10s)      |
+| `--duration` | `-d`  | Recording duration in milliseconds (optional)           | Continuous       |
 | `--output`   | `-o`  | Output file path                                         | Timestamped file |
 | `--screen`   | `-s`  | Screen index to record                                   | 1 (primary)      |
 | `--area`     | `-a`  | Recording area (x:y:width:height or center:width:height) | Full screen      |
@@ -759,6 +771,32 @@ _Bitrates automatically scale based on resolution and frame rate_
 - **CPU Usage**: 5-15% on modern Macs (varies with resolution/fps)
 - **Disk I/O**: Real-time writing, ~10-50 MB/s depending on quality
 - **Supported Resolutions**: Up to 8K on compatible hardware
+
+## Recent Updates
+
+### Continuous Recording Fix (v2.2.0)
+
+**Fixed**: Critical issue with continuous recording mode where files were corrupted when stopped with Ctrl+C.
+
+**Problem**: Previously, when using continuous recording (default mode without `--duration`), pressing Ctrl+C to stop recording would result in corrupted MOV files with "moov atom not found" errors. Files could not be played or processed by video tools like ffmpeg.
+
+**Solution**: Implemented synchronous file finalization using semaphore-based coordination to ensure proper MOV file closure before process exit.
+
+**Impact**: 
+- ✅ Continuous recordings now produce valid MOV files compatible with all video players and tools
+- ✅ Both continuous and timed recording modes work correctly
+- ✅ Files can be validated with `ffmpeg -i filename.mov` without errors
+- ✅ Graceful shutdown with proper progress indicators and file statistics
+
+**Usage**:
+```bash
+# Continuous recording (now fully functional)
+scap                    # Start recording, press Ctrl+C to stop
+scap --output demo.mov  # Continuous with custom output
+
+# Verify file integrity after recording
+ffmpeg -i demo.mov -hide_banner  # Should show valid video/audio streams
+```
 
 ## Building from Source
 

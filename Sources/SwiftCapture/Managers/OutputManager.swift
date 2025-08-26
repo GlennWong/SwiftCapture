@@ -346,14 +346,28 @@ class OutputManager {
         // Inputs should already be marked as finished by the caller
         // This avoids double-marking which could cause issues
         
+        print("💾 Starting file finalization...")
+        print("   Writer status: \(writer.status.rawValue)")
+        print("   Video input ready: \(videoInput.isReadyForMoreMediaData)")
+        if let audioInput = audioInput {
+            print("   Audio input ready: \(audioInput.isReadyForMoreMediaData)")
+        }
+        
         // Wait for writing to complete
         try await withCheckedThrowingContinuation { continuation in
+            print("💾 Calling writer.finishWriting...")
             writer.finishWriting {
+                print("💾 finishWriting completion handler called")
+                print("   Final writer status: \(writer.status.rawValue)")
+                
                 if writer.status == .completed {
+                    print("✅ Writer finalization completed successfully")
                     continuation.resume()
                 } else if let error = writer.error {
+                    print("❌ Writer finalization failed with error: \(error.localizedDescription)")
                     continuation.resume(throwing: OutputError.writerCreationFailed(error))
                 } else {
+                    print("❌ Writer finalization failed with unknown error")
                     let unknownError = NSError(
                         domain: "com.swiftcapture.output",
                         code: -1,
@@ -363,5 +377,7 @@ class OutputManager {
                 }
             }
         }
+        
+        print("💾 File finalization completed")
     }
 }
