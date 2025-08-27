@@ -27,6 +27,13 @@ A professional screen recording tool for macOS built with ScreenCaptureKit, feat
 
 ## Installation
 
+### Brew
+
+```bash
+brew tap GlennWong/swiftcapture
+brew install swiftcapture
+```
+
 ### From Source
 
 ```bash
@@ -222,7 +229,7 @@ SwiftCapture supports JSON output for all list operations, making it easy to int
 # Get screen information in JSON format
 scap --screen-list --json
 
-# Get application list in JSON format  
+# Get application list in JSON format
 scap --app-list --json
 
 # Get presets in JSON format
@@ -232,6 +239,7 @@ scap --list-presets --json
 #### JSON Output Examples
 
 **Screen List JSON:**
+
 ```json
 {
   "count": 2,
@@ -260,6 +268,7 @@ scap --list-presets --json
 ```
 
 **Application List JSON:**
+
 ```json
 {
   "count": 1,
@@ -295,6 +304,7 @@ scap --list-presets --json
 ```
 
 **Preset List JSON:**
+
 ```json
 {
   "count": 1,
@@ -429,7 +439,7 @@ scap --preset "tutorial" --duration 60000 --output custom.mov
 
 | Option       | Short | Description                                              | Default          |
 | ------------ | ----- | -------------------------------------------------------- | ---------------- |
-| `--duration` | `-d`  | Recording duration in milliseconds (optional)           | Continuous       |
+| `--duration` | `-d`  | Recording duration in milliseconds (optional)            | Continuous       |
 | `--output`   | `-o`  | Output file path                                         | Timestamped file |
 | `--screen`   | `-s`  | Screen index to record                                   | 1 (primary)      |
 | `--area`     | `-a`  | Recording area (x:y:width:height or center:width:height) | Full screen      |
@@ -735,8 +745,8 @@ rm temp_recording.mov
 
 ### Supported Formats and Codecs
 
-| Format | Codecs      | Max Resolution | Compatibility                    |
-| ------ | ----------- | -------------- | -------------------------------- |
+| Format | Codecs      | Max Resolution | Compatibility                      |
+| ------ | ----------- | -------------- | ---------------------------------- |
 | MOV    | H.264, HEVC | 8K (7680×4320) | macOS native, professional quality |
 
 ### Quality Settings and Bitrates
@@ -782,13 +792,15 @@ _Bitrates automatically scale based on resolution and frame rate_
 
 **Solution**: Implemented synchronous file finalization using semaphore-based coordination to ensure proper MOV file closure before process exit.
 
-**Impact**: 
+**Impact**:
+
 - ✅ Continuous recordings now produce valid MOV files compatible with all video players and tools
 - ✅ Both continuous and timed recording modes work correctly
 - ✅ Files can be validated with `ffmpeg -i filename.mov` without errors
 - ✅ Graceful shutdown with proper progress indicators and file statistics
 
 **Usage**:
+
 ```bash
 # Continuous recording (now fully functional)
 scap                    # Start recording, press Ctrl+C to stop
