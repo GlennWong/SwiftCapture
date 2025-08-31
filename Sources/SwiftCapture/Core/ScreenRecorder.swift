@@ -47,22 +47,15 @@ class ScreenRecorder {
             expectedDuration: finalConfig.duration
         )
         
-        // Setup graceful shutdown handling (only for timed recordings)
+        // Setup graceful shutdown handling
         var captureStream: SCStream?
         var isRecordingComplete = false
         
-        // For timed recordings, set up signal handler here
-        if finalConfig.duration >= 0 {
-            SignalHandler.shared.setupForRecording(progressIndicator: progressIndicator) {
-                // Graceful shutdown callback
-                if let stream = captureStream, !isRecordingComplete {
-                    do {
-                        try await self.captureController.stopCapture(stream)
-                    } catch {
-                        print("⚠️ Error during graceful shutdown: \(error.localizedDescription)")
-                    }
-                }
-            }
+        // Only set up signal handler for continuous recording (duration < 0)
+        // For timed recordings, let them complete naturally without signal interruption
+        if finalConfig.duration < 0 {
+            // This will be set up later in the continuous recording branch
+            // to avoid premature signal handler setup
         }
         
         do {
@@ -164,8 +157,27 @@ class ScreenRecorder {
             } else {
                 // Timed recording mode - wait for the exact duration
                 let durationSeconds = finalConfig.duration
-                let durationNanoseconds = UInt64(durationSeconds * 1_000_000_000)
-                try await Task.sleep(nanoseconds: durationNanoseconds)
+                
+                // Set up a gentle signal handler that allows early termination but doesn't exit immediately
+                var shouldStopEarly = false
+                SignalHandler.shared.setupGracefulShutdown {
+                    print("\n🛑 Early termination requested (Ctrl+C)")
+                    print("   Stopping timed recording gracefully...")
+                    shouldStopEarly = true
+                }
+                
+                // Wait for duration or early termination
+                let startTime = Date()
+                while !shouldStopEarly && Date().timeIntervalSince(startTime) < durationSeconds {
+                    try await Task.sleep(nanoseconds: 100_000_000) // Check every 100ms
+                }
+                
+                // Clean up signal handler
+                SignalHandler.shared.cleanup()
+                
+                if shouldStopEarly {
+                    print("✅ Recording stopped early by user request")
+                }
             }
             
             // Stop capture
