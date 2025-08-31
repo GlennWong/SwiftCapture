@@ -172,7 +172,6 @@ class Swiftcapture < Formula
 
   # System requirements - Universal Binary supports both Intel and Apple Silicon
   depends_on :macos => :monterey # macOS 12.3+
-  depends_on arch: [:arm64, :x86_64]
 
   def install
     # Install the binary
