@@ -32,8 +32,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **Project Renamed**: ScreenRecorder → SwiftCapture
-- **Command Renamed**: `screenrecorder` → `scap` (shorter, more efficient)
+- **Project Renamed**: SwiftCapture → SwiftCapture
+- **Command Renamed**: `SwiftCapture` → `scap` (shorter, more efficient)
 - **Updated all documentation and examples** to reflect new naming
 
 ## [2.0.0] - 2025-08-13
@@ -139,11 +139,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ```bash
 # Homebrew (recommended)
-brew install screenrecorder
+brew install swiftcapture
 
 # From source
-git clone <repository-url>
-cd ScreenRecorder
+git clone https://github.com/GlennWong/SwiftCapture.git
+cd SwiftCapture
 swift build -c release
 ```
 
@@ -206,8 +206,8 @@ swift build -c release
 ## Support
 
 - **Documentation**: [README.md](README.md) | [README_zh.md](README_zh.md)
-- **Issues**: [GitHub Issues](https://github.com/GlennWong/ScreenRecorder/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/GlennWong/ScreenRecorder/discussions)
+- **Issues**: [GitHub Issues](https://github.com/GlennWong/SwiftCapture/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/GlennWong/SwiftCapture/discussions)
 - **License**: MIT License
 
 ## Contributing

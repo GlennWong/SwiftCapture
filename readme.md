@@ -38,7 +38,7 @@ brew install swiftcapture
 
 ```bash
 # Clone the repository
-git clone <repository-url>
+git clone https://github.com/GlennWong/SwiftCapture.git
 cd SwiftCapture
 
 # Build release version
@@ -822,8 +822,8 @@ ffmpeg -i demo.mov -hide_banner  # Should show valid video/audio streams
 
 ```bash
 # Clone repository
-git clone <repository-url>
-cd ScreenRecorder
+git clone https://github.com/GlennWong/SwiftCapture.git
+cd Swiftcapture
 
 # Clean previous builds
 swift package clean
@@ -838,21 +838,21 @@ swift build -c release
 swift test
 
 # Install globally (optional)
-cp .build/release/ScreenRecorder /usr/local/bin/scap
+cp .build/release/Swiftcapture /usr/local/bin/scap
 ```
 
 ### Development
 
 ```bash
 # Run directly with Swift
-swift run ScreenRecorder --help
+swift run Swiftcapture --help
 
 # Run with arguments
-swift run ScreenRecorder --duration 5000 --output test.mov
+swift run Swiftcapture --duration 5000 --output test.mov
 
 # Build and run release version
 swift build -c release
-.build/release/ScreenRecorder --screen-list
+.build/release/Swiftcapture --screen-list
 ```
 
 ## Contributing

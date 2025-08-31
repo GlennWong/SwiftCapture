@@ -38,7 +38,7 @@ brew install swiftcapture
 
 ```bash
 # 克隆仓库
-git clone <repository-url>
+git clone https://github.com/GlennWong/SwiftCapture.git
 cd SwiftCapture
 
 # 构建发布版本
@@ -822,8 +822,8 @@ _比特率根据分辨率和帧率自动缩放_
 
 ```bash
 # 克隆仓库
-git clone <repository-url>
-cd ScreenRecorder
+git clone https://github.com/GlennWong/SwiftCapture.git
+cd SwiftCapture
 
 # 清理之前的构建
 swift package clean
@@ -838,21 +838,21 @@ swift build -c release
 swift test
 
 # 全局安装（可选）
-cp .build/release/ScreenRecorder /usr/local/bin/scap
+cp .build/release/SwiftCapture /usr/local/bin/scap
 ```
 
 ### 开发
 
 ```bash
 # 直接使用 Swift 运行
-swift run ScreenRecorder --help
+swift run SwiftCapture --help
 
 # 带参数运行
-swift run ScreenRecorder --duration 5000 --output test.mov
+swift run SwiftCapture --duration 5000 --output test.mov
 
 # 构建并运行发布版本
 swift build -c release
-.build/release/ScreenRecorder --screen-list
+.build/release/SwiftCapture --screen-list
 ```
 
 ## 贡献
