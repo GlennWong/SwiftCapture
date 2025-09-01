@@ -530,7 +530,7 @@ struct SwiftCaptureCommand: AsyncParsableCommand {
         if !json {
             print("")
             print("USAGE:")
-            print("  scap --save-preset \"meeting\"           # Save current settings")
+            print("  scap --save-preset \"meeting\"          # Save current settings")
             print("  scap --preset \"meeting\"               # Use saved preset")
             print("  scap --delete-preset \"old-config\"     # Delete preset")
         }

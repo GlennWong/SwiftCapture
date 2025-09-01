@@ -48,13 +48,6 @@ swift build -c release
 .build/release/SwiftCapture
 ```
 
-### Homebrew（即将推出）
-
-```bash
-# 将通过 Homebrew 提供
-brew install swiftcapture
-```
-
 ## 快速开始
 
 ```bash
@@ -148,8 +141,8 @@ scap -L
 
 # 录制指定应用程序
 scap --app Safari
-scap --app "Final Cut Pro"    # 带空格的名称需要引号
-scap -A Terminal               # 短标志
+scap --app "Final Cut Pro"      # 带空格的名称需要引号
+scap -A Terminal                # 短标志
 
 # 智能应用程序录制功能：
 # - 自动选择主窗口（最大的有标题窗口）
@@ -620,9 +613,9 @@ SwiftCapture 提供像素级精确的区域录制和智能缩放：
 
 ```bash
 # 高级区域选择示例
-scap --area 0:0:3840:2160     # Retina 显示器上的 4K 区域（自动缩放）
-scap --area center:1920:1080  # 1080p 居中，不受屏幕尺寸影响
-scap --screen 2 --area 100:100:1280:720  # 副显示器上的特定区域
+scap --area 0:0:3840:2160                 # Retina 显示器上的 4K 区域（自动缩放）
+scap --area center:1920:1080              # 1080p 居中，不受屏幕尺寸影响
+scap --screen 2 --area 100:100:1280:720   # 副显示器上的特定区域
 ```
 
 ### 智能应用程序录制

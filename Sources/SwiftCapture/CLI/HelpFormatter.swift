@@ -8,14 +8,14 @@ struct HelpFormatter {
     static let usageExamples = """
     
     EXAMPLES:
-      scap                                               # Continuous recording (press Ctrl+C to stop)
-      scap --output video.mov                           # Continuous recording with custom output
-      scap --duration 30000 --fps 60                    # 30 second recording at 60fps
-      scap --duration 5000 -f -o video.mov             # 5 second recording, force overwrite
-      scap --area 0:0:1920:1080 --screen 2             # Record specific area on second screen
-      scap --app Safari --duration 15000                # Record Safari for 15 seconds
-      scap --screen-list --json                         # List screens in JSON format
-      scap --app-list --json                            # List applications in JSON format
+      scap                                                # Continuous recording (press Ctrl+C to stop)
+      scap --output video.mov                             # Continuous recording with custom output
+      scap --duration 30000 --fps 60                      # 30 second recording at 60fps
+      scap --duration 5000 -f -o video.mov                # 5 second recording, force overwrite
+      scap --area 0:0:1920:1080 --screen 2                # Record specific area on second screen
+      scap --app Safari --duration 15000                  # Record Safari for 15 seconds
+      scap --screen-list --json                           # List screens in JSON format
+      scap --app-list --json                              # List applications in JSON format
     
     RECORDING MODES:
       • Default: Continuous recording until Ctrl+C is pressed

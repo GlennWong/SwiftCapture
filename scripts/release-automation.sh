@@ -141,10 +141,10 @@ System Requirements:
 - Microphone permission (optional)
 
 Usage:
-scap --help                    # Show help
-scap --screen-list            # List available screens
-scap --duration 5000          # Record for 5 seconds
-scap --output recording.mov   # Specify output file
+scap --help                     # Show help
+scap --screen-list              # List available screens
+scap --duration 5000            # Record for 5 seconds
+scap --output recording.mov     # Specify output file
 
 For more information: https://github.com/GlennWong/SwiftCapture
 EOF
@@ -198,10 +198,10 @@ class Swiftcapture < Formula
       For microphone recording, also grant Microphone permission in the same way.
       
       Usage examples:
-        scap --help                    # Show help
-        scap --screen-list            # List available screens
-        scap --duration 5000          # Record for 5 seconds
-        scap --output recording.mov   # Specify output file
+        scap --help                     # Show help
+        scap --screen-list              # List available screens
+        scap --duration 5000            # Record for 5 seconds
+        scap --output recording.mov     # Specify output file
     EOS
   end
 

@@ -28,7 +28,7 @@ SwiftCapture 是一个专业的 macOS 屏幕录制工具，基于 ScreenCaptureK
 ```bash
 scap                        # 连续录制，按 Ctrl+C 停止
 scap --duration 30000       # 30秒定时录制
-scap -d 5000               # 5秒定时录制
+scap -d 5000                # 5秒定时录制
 ```
 
 **重要说明**: 

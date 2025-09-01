@@ -48,13 +48,6 @@ swift build -c release
 .build/release/SwiftCapture
 ```
 
-### Homebrew (Coming Soon)
-
-```bash
-# Will be available via Homebrew
-brew install swiftcapture
-```
-
 ## Quick Start
 
 ```bash
@@ -148,8 +141,8 @@ scap -L
 
 # Record specific application
 scap --app Safari
-scap --app "Final Cut Pro"    # Quote names with spaces
-scap -A Terminal               # Short flag
+scap --app "Final Cut Pro"      # Quote names with spaces
+scap -A Terminal                # Short flag
 
 # Smart application recording features:
 # - Automatically selects main window (largest with title)
@@ -620,9 +613,9 @@ SwiftCapture provides pixel-perfect area recording with intelligent scaling:
 
 ```bash
 # Examples of advanced area selection
-scap --area 0:0:3840:2160     # 4K area on Retina display (auto-scaled)
-scap --area center:1920:1080  # 1080p centered regardless of screen size
-scap --screen 2 --area 100:100:1280:720  # Specific area on secondary display
+scap --area 0:0:3840:2160                 # 4K area on Retina display (auto-scaled)
+scap --area center:1920:1080              # 1080p centered regardless of screen size
+scap --screen 2 --area 100:100:1280:720   # Specific area on secondary display
 ```
 
 ### Smart Application Recording

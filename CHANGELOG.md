@@ -138,7 +138,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Installation
 
 ```bash
-# Homebrew (recommended)
+# Homebrew Tap (recommended)
+brew tap GlennWong/swiftcapture
 brew install swiftcapture
 
 # From source
