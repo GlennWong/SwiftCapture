@@ -1,5 +1,5 @@
 import Foundation
-@preconcurrency import AVFoundation
+import AVFoundation
 import CoreGraphics
 
 /// Manages output file creation and AVAssetWriter configuration

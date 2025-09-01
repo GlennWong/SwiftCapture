@@ -1,6 +1,6 @@
 {
   "name": "SwiftCapture",
-  "version": "2.1.9",
+  "version": "2.2.0",
   "description": "Professional screen recording tool for macOS with comprehensive CLI interface",
   "homepage": "https://github.com/GlennWong/SwiftCapture",
   "license": "MIT",

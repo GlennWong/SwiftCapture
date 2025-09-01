@@ -10,7 +10,7 @@ PRODUCT_NAME="SwiftCapture"
 BINARY_NAME="scap"
 BUILD_DIR=".build"
 RELEASE_DIR="release"
-VERSION="2.1.8"
+VERSION="2.2.0"
 
 # Colors for output
 RED='\033[0;31m'
@@ -26,7 +26,7 @@ echo -e "${YELLOW}📋 Checking system requirements...${NC}"
 
 # Check macOS version
 MACOS_VERSION=$(sw_vers -productVersion)
-REQUIRED_VERSION="2.1.8"
+REQUIRED_VERSION="12.3"
 
 if [[ "$(printf '%s\n' "$REQUIRED_VERSION" "$MACOS_VERSION" | sort -V | head -n1)" != "$REQUIRED_VERSION" ]]; then
     echo -e "${RED}❌ Error: macOS $REQUIRED_VERSION or later required. Current: $MACOS_VERSION${NC}"
@@ -62,21 +62,38 @@ fi
 # Create release directory
 mkdir -p "$RELEASE_DIR"
 
-# Build release version
-echo -e "${YELLOW}🔨 Building release version...${NC}"
-swift build -c release --disable-sandbox
+# Build universal binary for both architectures
+echo -e "${YELLOW}🔨 Building for arm64...${NC}"
+swift build -c release --disable-sandbox --arch arm64
 
-# Check if build was successful
-if [ ! -f "$BUILD_DIR/release/$PRODUCT_NAME" ]; then
-    echo -e "${RED}❌ Build failed: Binary not found at $BUILD_DIR/release/$PRODUCT_NAME${NC}"
+echo -e "${YELLOW}🔨 Building for x86_64...${NC}"
+swift build -c release --disable-sandbox --arch x86_64
+
+# Check if both builds were successful
+if [ ! -f "$BUILD_DIR/arm64-apple-macosx/release/$PRODUCT_NAME" ]; then
+    echo -e "${RED}❌ ARM64 build failed: Binary not found${NC}"
     exit 1
 fi
 
-echo -e "${GREEN}✅ Build successful${NC}"
+if [ ! -f "$BUILD_DIR/x86_64-apple-macosx/release/$PRODUCT_NAME" ]; then
+    echo -e "${RED}❌ x86_64 build failed: Binary not found${NC}"
+    exit 1
+fi
 
-# Copy binary to release directory
-echo -e "${YELLOW}📦 Preparing release package...${NC}"
-cp "$BUILD_DIR/release/$PRODUCT_NAME" "$RELEASE_DIR/$BINARY_NAME"
+# Create universal binary
+echo -e "${YELLOW}🔗 Creating universal binary...${NC}"
+mkdir -p "$RELEASE_DIR"
+lipo -create \
+    "$BUILD_DIR/arm64-apple-macosx/release/$PRODUCT_NAME" \
+    "$BUILD_DIR/x86_64-apple-macosx/release/$PRODUCT_NAME" \
+    -output "$RELEASE_DIR/$BINARY_NAME"
+
+# Verify the universal binary
+echo -e "${YELLOW}🔍 Verifying universal binary...${NC}"
+echo "Architecture info:"
+lipo -info "$RELEASE_DIR/$BINARY_NAME"
+
+echo -e "${GREEN}✅ Universal binary created successfully${NC}"
 
 # Make binary executable
 chmod +x "$RELEASE_DIR/$BINARY_NAME"

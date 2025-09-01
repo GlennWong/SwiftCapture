@@ -1,6 +1,6 @@
 import Foundation
 import ScreenCaptureKit
-@preconcurrency import AVFoundation
+import AVFoundation
 import AppKit
 import CoreGraphics
 

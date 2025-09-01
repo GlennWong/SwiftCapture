@@ -1,6 +1,6 @@
 import Foundation
 import ScreenCaptureKit
-@preconcurrency import AVFoundation
+import AVFoundation
 
 /// Main screen recorder class that coordinates all recording components
 /// Uses a modular architecture for maintainable and testable code
@@ -49,13 +49,21 @@ class ScreenRecorder {
         
         // Setup graceful shutdown handling
         var captureStream: SCStream?
-        var isRecordingComplete = false
+        let isRecordingComplete = UnsafeMutablePointer<Bool>.allocate(capacity: 1)
+        isRecordingComplete.initialize(to: false)
         
-        // Only set up signal handler for continuous recording (duration < 0)
-        // For timed recordings, let them complete naturally without signal interruption
-        if finalConfig.duration < 0 {
-            // This will be set up later in the continuous recording branch
-            // to avoid premature signal handler setup
+        // For timed recordings, set up signal handler here
+        if finalConfig.duration >= 0 {
+            SignalHandler.shared.setupForRecording(progressIndicator: progressIndicator) {
+                // Graceful shutdown callback
+                if let stream = captureStream, !isRecordingComplete.pointee {
+                    do {
+                        try await self.captureController.stopCapture(stream)
+                    } catch {
+                        print("⚠️ Error during graceful shutdown: \(error.localizedDescription)")
+                    }
+                }
+            }
         }
         
         do {
@@ -77,75 +85,58 @@ class ScreenRecorder {
                 
                 // Use async continuation to wait indefinitely until the signal handler stops the recording
                 try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+                    // Store references to avoid capture issues
+                    let currentStream = captureStream
+                    
                     // Update the signal handler to resume the continuation when interrupted
-                    SignalHandler.shared.setupForRecording(progressIndicator: progressIndicator) {
-                        // Graceful shutdown callback for continuous recording
-                        // Use a semaphore to ensure finalization completes before exit
-                        let finalizationSemaphore = DispatchSemaphore(value: 0)
-                        var finalizationError: Error?
+                    SignalHandler.shared.setupForRecording(progressIndicator: progressIndicator) { [weak self] in
+                        guard let self = self else {
+                            continuation.resume()
+                            return
+                        }
                         
-                        Task {
-                            do {
-                                // Mark recording as complete to prevent double stopping
-                                isRecordingComplete = true
-                                
-                                print("🛑 Stopping continuous recording and finalizing file...")
-                                
-                                // Stop the capture stream
-                                if let stream = captureStream {
-                                    do {
-                                        try await self.captureController.stopCapture(stream)
-                                    } catch {
-                                        print("⚠️ Error during graceful shutdown: \(error.localizedDescription)")
-                                    }
-                                }
-                                
-                                // Mark inputs as finished
-                                videoInput.markAsFinished()
-                                if let audioInput = audioInput {
-                                    audioInput.markAsFinished()
-                                }
-                                
-                                // Finalize recording with proper error handling and timing
-                                let finalizeStartTime = Date()
+                        // Graceful shutdown callback for continuous recording
+                        Task { @MainActor in
+                            // Mark recording as complete to prevent double stopping
+                            isRecordingComplete.pointee = true
+                            
+                            print("🛑 Stopping continuous recording and finalizing file...")
+                            
+                            // Stop the capture stream
+                            if let stream = currentStream {
                                 do {
-                                    try await self.outputManager.finalizeRecording(
-                                        writer: writer,
-                                        videoInput: videoInput,
-                                        audioInput: audioInput
-                                    )
-                                    let finalizeDuration = Date().timeIntervalSince(finalizeStartTime)
-                                    print("✅ File finalized successfully in \(String(format: "%.2f", finalizeDuration))s")
+                                    try await self.captureController.stopCapture(stream)
                                 } catch {
-                                    let finalizeDuration = Date().timeIntervalSince(finalizeStartTime)
-                                    print("⚠️ Error finalizing recording after \(String(format: "%.2f", finalizeDuration))s: \(error.localizedDescription)")
-                                    print("📁 Note: Video file may be corrupted")
-                                    finalizationError = error
+                                    print("⚠️ Error during graceful shutdown: \(error.localizedDescription)")
                                 }
-                                
-                                // Complete progress indicator
-                                progressIndicator.stopProgress()
-                                
-                            } catch {
-                                finalizationError = error
-                                print("⚠️ Unexpected error during finalization: \(error.localizedDescription)")
                             }
                             
-                            // Signal that finalization is complete
-                            finalizationSemaphore.signal()
-                        }
-                        
-                        // Wait for finalization to complete with timeout
-                        let timeoutResult = finalizationSemaphore.wait(timeout: .now() + 8.0)
-                        
-                        if timeoutResult == .timedOut {
-                            print("⚠️ Finalization timed out - file may be incomplete")
-                        }
-                        
-                        // Resume continuation to exit the wait
-                        if let error = finalizationError {
-                            continuation.resume(throwing: error)
-                        } else {
+                            // Mark inputs as finished
+                            videoInput.markAsFinished()
+                            if let audioInput = audioInput {
+                                audioInput.markAsFinished()
+                            }
+                            
+                            // Finalize recording with proper error handling and timing
+                            let finalizeStartTime = Date()
+                            do {
+                                try await self.outputManager.finalizeRecording(
+                                    writer: writer,
+                                    videoInput: videoInput,
+                                    audioInput: audioInput
+                                )
+                                let finalizeDuration = Date().timeIntervalSince(finalizeStartTime)
+                                print("✅ File finalized successfully in \(String(format: "%.2f", finalizeDuration))s")
+                            } catch {
+                                let finalizeDuration = Date().timeIntervalSince(finalizeStartTime)
+                                print("⚠️ Error finalizing recording after \(String(format: "%.2f", finalizeDuration))s: \(error.localizedDescription)")
+                                print("📁 Note: Video file may be corrupted")
+                                continuation.resume(throwing: error)
+                                return
+                            }
+                            
+                            // Complete progress indicator
+                            progressIndicator.stopProgress()
                             continuation.resume()
                         }
                     }
@@ -184,7 +175,7 @@ class ScreenRecorder {
             progressIndicator.updateProgress(message: "Stopping recording...")
             
             // Mark recording as complete to prevent signal handler interference
-            isRecordingComplete = true
+            isRecordingComplete.pointee = true
             
             // Stop the capture stream first
             try await captureController.stopCapture(captureStream!)
@@ -234,9 +225,9 @@ class ScreenRecorder {
             progressIndicator.stopProgressWithError(error)
             
             // Try to stop capture if it was started and not already complete
-            if let stream = captureStream, !isRecordingComplete {
+            if let stream = captureStream, !isRecordingComplete.pointee {
                 do {
-                    isRecordingComplete = true
+                    isRecordingComplete.pointee = true
                     try await captureController.stopCapture(stream)
                 } catch {
                     print("⚠️ Error stopping capture during cleanup: \(error.localizedDescription)")
@@ -245,6 +236,9 @@ class ScreenRecorder {
             
             throw error
         }
+        
+        // Clean up memory
+        isRecordingComplete.deallocate()
         
         // Clean up signal handler
         SignalHandler.shared.cleanup()
