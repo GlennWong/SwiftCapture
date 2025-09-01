@@ -7,8 +7,13 @@ class SignalHandler {
     
     // MARK: - Properties
     private var signalSource: DispatchSourceSignal?
-    private var isHandling = false
+    private var _isHandling = false
     private var onInterrupt: (() -> Void)?
+    
+    /// Public read-only access to the signal handling state for debugging
+    var isHandling: Bool {
+        return _isHandling
+    }
     
     // MARK: - Singleton
     static let shared = SignalHandler()
@@ -20,10 +25,10 @@ class SignalHandler {
     /// Setup signal handling for graceful shutdown
     /// - Parameter onInterrupt: Callback to execute when Ctrl+C is pressed
     func setupGracefulShutdown(onInterrupt: @escaping () -> Void) {
-        guard !isHandling else { return }
+        guard !_isHandling else { return }
         
         self.onInterrupt = onInterrupt
-        isHandling = true
+        _isHandling = true
         
         // Ignore the default SIGINT behavior
         signal(SIGINT, SIG_IGN)
@@ -42,7 +47,7 @@ class SignalHandler {
     func cleanup() {
         signalSource?.cancel()
         signalSource = nil
-        isHandling = false
+        _isHandling = false
         onInterrupt = nil
         
         // Restore default SIGINT behavior

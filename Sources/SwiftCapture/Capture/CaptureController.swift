@@ -150,6 +150,9 @@ class CaptureController {
                     frameCount += 1
                     if !success {
                         print("⚠️ Failed to append video frame at timestamp: \(CMTimeGetSeconds(timestamp))")
+                        print("   Frame count: \(frameCount), Video input ready: \(videoInput.isReadyForMoreMediaData)")
+                    } else if frameCount % 600 == 0 { // Log every 600 frames (20 seconds at 30fps)
+                        print("📹 Video frames processed: \(frameCount) (timestamp: \(String(format: "%.2f", CMTimeGetSeconds(timestamp)))s)")
                     }
                 }
             case .audio:
@@ -158,6 +161,9 @@ class CaptureController {
                     audioSampleCount += 1
                     if !success {
                         print("⚠️ Failed to append audio sample at timestamp: \(CMTimeGetSeconds(timestamp))")
+                        print("   Audio samples: \(audioSampleCount), Audio input ready: \(audioInput.isReadyForMoreMediaData)")
+                    } else if audioSampleCount % 1000 == 0 { // Log every 1000 audio samples
+                        print("🎵 Audio samples processed: \(audioSampleCount) (timestamp: \(String(format: "%.2f", CMTimeGetSeconds(timestamp)))s)")
                     }
                 }
             default:

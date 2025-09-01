@@ -1,6 +1,7 @@
 import Foundation
 import ScreenCaptureKit
 @preconcurrency import AVFoundation
+import Darwin
 
 /// Main screen recorder class that coordinates all recording components
 /// Uses a modular architecture for maintainable and testable code
@@ -32,6 +33,15 @@ class ScreenRecorder {
         
         print("🎬 Starting recording with configuration:")
         print("   \(finalConfig)")
+        print("📝 Recording details:")
+        print("   Mode: \(finalConfig.duration < 0 ? "Continuous" : "Timed")")
+        if finalConfig.duration >= 0 {
+            print("   Duration: \(String(format: "%.2f", finalConfig.duration))s (\(Int(finalConfig.duration * 1000))ms)")
+        }
+        print("   Output: \(finalConfig.outputURL.path)")
+        print("   Resolution: \(Int(finalConfig.videoSettings.resolution.width)) × \(Int(finalConfig.videoSettings.resolution.height))")
+        print("   Frame rate: \(finalConfig.videoSettings.fps) fps")
+        print("   Quality: \(finalConfig.videoSettings.quality.rawValue)")
         
         // Show countdown if configured
         if finalConfig.countdown > 0 {
@@ -80,72 +90,83 @@ class ScreenRecorder {
                     // Update the signal handler to resume the continuation when interrupted
                     SignalHandler.shared.setupForRecording(progressIndicator: progressIndicator) {
                         // Graceful shutdown callback for continuous recording
-                        // Use a semaphore to ensure finalization completes before exit
-                        let finalizationSemaphore = DispatchSemaphore(value: 0)
-                        var finalizationError: Error?
-                        
+                        // Use async/await pattern for proper concurrency handling
                         Task {
-                            do {
-                                // Mark recording as complete to prevent double stopping
-                                isRecordingComplete = true
-                                
-                                print("🛑 Stopping continuous recording and finalizing file...")
-                                
-                                // Stop the capture stream
-                                if let stream = captureStream {
+                            // Mark recording as complete to prevent double stopping
+                            isRecordingComplete = true
+                            
+                            print("🛑 Stopping continuous recording and finalizing file...")
+                            
+                            // Stop the capture stream
+                            if let stream = captureStream {
+                                do {
+                                    try await self.captureController.stopCapture(stream)
+                                } catch {
+                                    print("⚠️ Error during graceful shutdown: \(error.localizedDescription)")
+                                }
+                            }
+                            
+                            // Mark inputs as finished
+                            videoInput.markAsFinished()
+                            if let audioInput = audioInput {
+                                audioInput.markAsFinished()
+                            }
+                            
+                            // Finalize recording with proper error handling and timing
+                            let finalizeStartTime = Date()
+                            let finalizationResult = await withTaskGroup(of: Result<Void, Error>.self) { group in
+                                // Finalization task
+                                group.addTask {
                                     do {
-                                        try await self.captureController.stopCapture(stream)
+                                        try await self.outputManager.finalizeRecording(
+                                            writer: writer,
+                                            videoInput: videoInput,
+                                            audioInput: audioInput
+                                        )
+                                        return .success(())
                                     } catch {
-                                        print("⚠️ Error during graceful shutdown: \(error.localizedDescription)")
+                                        return .failure(error)
                                     }
                                 }
                                 
-                                // Mark inputs as finished
-                                videoInput.markAsFinished()
-                                if let audioInput = audioInput {
-                                    audioInput.markAsFinished()
+                                // Timeout task (8 seconds)
+                                group.addTask {
+                                    do {
+                                        try await Task.sleep(nanoseconds: 8_000_000_000)
+                                        return .failure(NSError(domain: "FinalizationTimeout", code: -1, 
+                                                      userInfo: [NSLocalizedDescriptionKey: "Finalization timed out"]))
+                                    } catch {
+                                        return .failure(error)
+                                    }
                                 }
                                 
-                                // Finalize recording with proper error handling and timing
-                                let finalizeStartTime = Date()
-                                do {
-                                    try await self.outputManager.finalizeRecording(
-                                        writer: writer,
-                                        videoInput: videoInput,
-                                        audioInput: audioInput
-                                    )
-                                    let finalizeDuration = Date().timeIntervalSince(finalizeStartTime)
-                                    print("✅ File finalized successfully in \(String(format: "%.2f", finalizeDuration))s")
-                                } catch {
-                                    let finalizeDuration = Date().timeIntervalSince(finalizeStartTime)
-                                    print("⚠️ Error finalizing recording after \(String(format: "%.2f", finalizeDuration))s: \(error.localizedDescription)")
-                                    print("📁 Note: Video file may be corrupted")
-                                    finalizationError = error
-                                }
-                                
-                                // Complete progress indicator
-                                progressIndicator.stopProgress()
-                                
-                            } catch {
-                                finalizationError = error
-                                print("⚠️ Unexpected error during finalization: \(error.localizedDescription)")
+                                // Return the first completed task
+                                let result = await group.next() ?? .failure(NSError(domain: "UnknownError", code: -1))
+                                group.cancelAll()
+                                return result
                             }
                             
-                            // Signal that finalization is complete
-                            finalizationSemaphore.signal()
-                        }
-                        
-                        // Wait for finalization to complete with timeout
-                        let timeoutResult = finalizationSemaphore.wait(timeout: .now() + 8.0)
-                        
-                        if timeoutResult == .timedOut {
-                            print("⚠️ Finalization timed out - file may be incomplete")
-                        }
-                        
-                        // Resume continuation to exit the wait
-                        if let error = finalizationError {
-                            continuation.resume(throwing: error)
-                        } else {
+                            let finalizeDuration = Date().timeIntervalSince(finalizeStartTime)
+                            
+                            switch finalizationResult {
+                            case .success():
+                                print("✅ File finalized successfully in \(String(format: "%.2f", finalizeDuration))s")
+                            case .failure(let error):
+                                if error.localizedDescription.contains("timed out") {
+                                    print("⚠️ Finalization timed out - file may be incomplete")
+                                } else {
+                                    print("⚠️ Error finalizing recording after \(String(format: "%.2f", finalizeDuration))s: \(error.localizedDescription)")
+                                    print("📁 Note: Video file may be corrupted")
+                                }
+                                // Continue with the error to be handled by continuation
+                                continuation.resume(throwing: error)
+                                return
+                            }
+                            
+                            // Complete progress indicator
+                            progressIndicator.stopProgress()
+                            
+                            // Resume continuation successfully
                             continuation.resume()
                         }
                     }
@@ -157,26 +178,91 @@ class ScreenRecorder {
             } else {
                 // Timed recording mode - wait for the exact duration
                 let durationSeconds = finalConfig.duration
+                print("🕰️ Starting timed recording for \(String(format: "%.2f", durationSeconds)) seconds (\(String(format: "%.0f", durationSeconds * 1000)) ms)")
+                
+                // Enhanced logging for debugging duration issues
+                print("🔍 Debug Info:")
+                print("   Target duration: \(durationSeconds) seconds (\(Int(durationSeconds * 1000)) ms)")
+                print("   Signal handler state before setup: \(SignalHandler.shared.isHandling ? "active" : "inactive")")
+                
+                // Clean up any existing signal handlers to ensure fresh start
+                SignalHandler.shared.cleanup()
+                print("   Signal handler cleaned up, state: \(SignalHandler.shared.isHandling ? "active" : "inactive")")
                 
                 // Set up a gentle signal handler that allows early termination but doesn't exit immediately
                 var shouldStopEarly = false
+                var earlyTerminationReason = "Unknown"
+                
                 SignalHandler.shared.setupGracefulShutdown {
                     print("\n🛑 Early termination requested (Ctrl+C)")
                     print("   Stopping timed recording gracefully...")
+                    earlyTerminationReason = "User interrupted (Ctrl+C)"
                     shouldStopEarly = true
                 }
+                print("   Signal handler setup complete, state: \(SignalHandler.shared.isHandling ? "active" : "inactive")")
                 
                 // Wait for duration or early termination
                 let startTime = Date()
-                while !shouldStopEarly && Date().timeIntervalSince(startTime) < durationSeconds {
+                var lastProgressTime = startTime
+                var iterationCount = 0
+                var lastLogTime = startTime
+                
+                print("🚀 Starting recording loop at \(startTime)")
+                
+                while !shouldStopEarly {
+                    let elapsed = Date().timeIntervalSince(startTime)
+                    
+                    // Check if we've reached the target duration
+                    if elapsed >= durationSeconds {
+                        print("✓ Target duration reached: \(String(format: "%.2f", elapsed))s")
+                        break
+                    }
+                    
+                    // Progress logging every 10 seconds
+                    if Date().timeIntervalSince(lastProgressTime) >= 10.0 {
+                        let remaining = durationSeconds - elapsed
+                        print("🔄 Recording progress: \(String(format: "%.1f", elapsed))s / \(String(format: "%.1f", durationSeconds))s (\(String(format: "%.1f", remaining))s remaining)")
+                        lastProgressTime = Date()
+                    }
+                    
+                    // Enhanced debugging: Log detailed status every 30 seconds
+                    if Date().timeIntervalSince(lastLogTime) >= 30.0 {
+                        var memoryUsage = mach_task_basic_info()
+                        var size = mach_msg_type_number_t(MemoryLayout<mach_task_basic_info>.size)/4
+                        let kerr: kern_return_t = withUnsafeMutablePointer(to: &memoryUsage) {
+                            $0.withMemoryRebound(to: integer_t.self, capacity: 1) {
+                                task_info(mach_task_self_,
+                                         task_flavor_t(MACH_TASK_BASIC_INFO),
+                                         $0,
+                                         &size)
+                            }
+                        }
+                        
+                        if kerr == KERN_SUCCESS {
+                            let memoryMB = Double(memoryUsage.resident_size) / 1024.0 / 1024.0
+                            print("📊 Status check at \(String(format: "%.1f", elapsed))s:")
+                            print("   Memory usage: \(String(format: "%.1f", memoryMB))MB")
+                            print("   Signal handler state: \(SignalHandler.shared.isHandling ? "active" : "inactive")")
+                            print("   Should stop early: \(shouldStopEarly)")
+                            print("   Iterations completed: \(iterationCount)")
+                        }
+                        lastLogTime = Date()
+                    }
+                    
+                    iterationCount += 1
                     try await Task.sleep(nanoseconds: 100_000_000) // Check every 100ms
                 }
+                
+                let actualDuration = Date().timeIntervalSince(startTime)
+                print("🏁 Recording duration completed: \(String(format: "%.2f", actualDuration))s (target: \(String(format: "%.2f", durationSeconds))s, iterations: \(iterationCount))")
                 
                 // Clean up signal handler
                 SignalHandler.shared.cleanup()
                 
                 if shouldStopEarly {
-                    print("✅ Recording stopped early by user request")
+                    print("⚠️ Recording stopped early by: \(earlyTerminationReason)")
+                    print("   Actual duration: \(String(format: "%.2f", actualDuration))s / Target: \(String(format: "%.2f", durationSeconds))s")
+                    print("   Duration difference: \(String(format: "%.2f", durationSeconds - actualDuration))s")
                 }
             }
             
@@ -186,8 +272,12 @@ class ScreenRecorder {
             // Mark recording as complete to prevent signal handler interference
             isRecordingComplete = true
             
+            print("🛑 Stopping capture stream...")
+            
             // Stop the capture stream first
             try await captureController.stopCapture(captureStream!)
+            
+            print("📝 Marking inputs as finished...")
             
             // Mark inputs as finished after stopping capture
             videoInput.markAsFinished()
@@ -197,6 +287,7 @@ class ScreenRecorder {
             
             // Finalize output with timeout protection
             let finalizeStartTime = Date()
+            print("💾 Starting file finalization...")
             do {
                 try await withThrowingTaskGroup(of: Void.self) { group in
                     // 文件写入任务
@@ -218,6 +309,8 @@ class ScreenRecorder {
                     try await group.next()
                     group.cancelAll()
                 }
+                let finalizeDuration = Date().timeIntervalSince(finalizeStartTime)
+                print("✅ File finalization completed successfully in \(String(format: "%.2f", finalizeDuration))s")
             } catch {
                 let finalizeDuration = Date().timeIntervalSince(finalizeStartTime)
                 print("⚠️ 文件写入耗时: \(String(format: "%.2f", finalizeDuration))秒")
