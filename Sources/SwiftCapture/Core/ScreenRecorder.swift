@@ -203,19 +203,61 @@ class ScreenRecorder {
                 
                 // Wait for duration or early termination
                 let startTime = Date()
+                let expectedEndTime = startTime.addingTimeInterval(durationSeconds)
+                let acceptableErrorMargin: TimeInterval = 0.1 // 允许0.1秒误差
+                
                 var lastProgressTime = startTime
                 var iterationCount = 0
                 var lastLogTime = startTime
+                var lastDurationCheckTime = startTime
                 
                 print("🚀 Starting recording loop at \(startTime)")
+                print("🎯 Expected end time: \(expectedEndTime) (\(String(format: "%.1f", durationSeconds))s later)")
+                print("⚙️ Acceptable error margin: ±\(acceptableErrorMargin)s")
                 
                 while !shouldStopEarly {
                     let elapsed = Date().timeIntervalSince(startTime)
+                    let currentTime = Date()
                     
-                    // Check if we've reached the target duration
-                    if elapsed >= durationSeconds {
-                        print("✓ Target duration reached: \(String(format: "%.2f", elapsed))s")
+                    // 双重保险检查：基于时间间隔和绝对时间戳
+                    let timeBasedCheck = elapsed >= durationSeconds
+                    let timestampBasedCheck = currentTime >= expectedEndTime.addingTimeInterval(-acceptableErrorMargin)
+                    
+                    // 主要检查：达到目标时长
+                    if timeBasedCheck {
+                        print("✓ Target duration reached: \(String(format: "%.2f", elapsed))s (time-based check)")
                         break
+                    }
+                    
+                    // 备用检查：达到预期结束时间
+                    if timestampBasedCheck {
+                        let timeUntilExpected = expectedEndTime.timeIntervalSince(currentTime)
+                        if timeUntilExpected <= acceptableErrorMargin {
+                            print("✓ Target duration reached: \(String(format: "%.2f", elapsed))s (timestamp-based check)")
+                            print("🕰️ Time until expected end: \(String(format: "%.2f", timeUntilExpected))s")
+                            break
+                        }
+                    }
+                    
+                    // 安全检查：防止超时运行（比目标时间多1秒）
+                    if elapsed > durationSeconds + 1.0 {
+                        print("⚠️ Safety check triggered: Recording exceeded target by \(String(format: "%.2f", elapsed - durationSeconds))s")
+                        earlyTerminationReason = "Safety timeout - exceeded target duration by \(String(format: "%.2f", elapsed - durationSeconds))s"
+                        shouldStopEarly = true
+                        break
+                    }
+                    
+                    // 定期检查：每半秒检查一次对时状态（静默检查）
+                    if Date().timeIntervalSince(lastDurationCheckTime) >= 0.2 {
+                        let timeUntilExpected = expectedEndTime.timeIntervalSince(currentTime)
+                        
+                        // 静默检查时间漂移，只在异常时输出警告
+                        let timeDrift = abs(timeUntilExpected - (durationSeconds - elapsed))
+                        if timeDrift > 1.0 {
+                            print("⚠️ Time drift detected: \(String(format: "%.2f", timeDrift))s")
+                        }
+                        
+                        lastDurationCheckTime = Date()
                     }
                     
                     // Progress logging every 10 seconds
@@ -254,7 +296,29 @@ class ScreenRecorder {
                 }
                 
                 let actualDuration = Date().timeIntervalSince(startTime)
-                print("🏁 Recording duration completed: \(String(format: "%.2f", actualDuration))s (target: \(String(format: "%.2f", durationSeconds))s, iterations: \(iterationCount))")
+                let actualEndTime = Date()
+                let expectedDurationDiff = actualDuration - durationSeconds
+                let timestampDiff = actualEndTime.timeIntervalSince(expectedEndTime)
+                
+                print("🏁 Recording duration analysis:")
+                print("   Actual duration: \(String(format: "%.2f", actualDuration))s")
+                print("   Target duration: \(String(format: "%.2f", durationSeconds))s")
+                print("   Duration difference: \(String(format: "%.2f", expectedDurationDiff))s")
+                print("   Expected end time: \(expectedEndTime)")
+                print("   Actual end time: \(actualEndTime)")
+                print("   Timestamp difference: \(String(format: "%.2f", timestampDiff))s")
+                print("   Total iterations: \(iterationCount)")
+                
+                // 分析结束原因
+                if shouldStopEarly {
+                    print("⚠️ Recording ended early - Reason: \(earlyTerminationReason)")
+                } else if abs(expectedDurationDiff) <= acceptableErrorMargin {
+                    print("✅ Recording completed within acceptable margin (±\(acceptableErrorMargin)s)")
+                } else if expectedDurationDiff > acceptableErrorMargin {
+                    print("⚠️ Recording ran \(String(format: "%.2f", expectedDurationDiff))s longer than expected")
+                } else {
+                    print("⚠️ Recording ended \(String(format: "%.2f", -expectedDurationDiff))s earlier than expected")
+                }
                 
                 // Clean up signal handler
                 SignalHandler.shared.cleanup()
@@ -262,7 +326,17 @@ class ScreenRecorder {
                 if shouldStopEarly {
                     print("⚠️ Recording stopped early by: \(earlyTerminationReason)")
                     print("   Actual duration: \(String(format: "%.2f", actualDuration))s / Target: \(String(format: "%.2f", durationSeconds))s")
-                    print("   Duration difference: \(String(format: "%.2f", durationSeconds - actualDuration))s")
+                    print("   Duration shortfall: \(String(format: "%.2f", durationSeconds - actualDuration))s")
+                    print("   Timestamp difference: \(String(format: "%.2f", timestampDiff))s")
+                    
+                    // 提供诊断建议
+                    if earlyTerminationReason.contains("Safety timeout") {
+                        print("🔍 Analysis: Recording exceeded expected duration significantly")
+                    } else if earlyTerminationReason.contains("Ctrl+C") {
+                        print("🔍 Analysis: User manually interrupted the recording")
+                    } else {
+                        print("🔍 Analysis: Unexpected early termination - investigate signal sources")
+                    }
                 }
             }
             
