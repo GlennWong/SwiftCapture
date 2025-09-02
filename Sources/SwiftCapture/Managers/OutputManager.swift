@@ -347,31 +347,40 @@ class OutputManager {
         // This avoids double-marking which could cause issues
         
         print("💾 Starting file finalization...")
-        print("   Writer status: \(writer.status.rawValue)")
+        print("   Writer status: \(writer.status.rawValue) (\(writerStatusDescription(writer.status)))")
         print("   Video input ready: \(videoInput.isReadyForMoreMediaData)")
         if let audioInput = audioInput {
             print("   Audio input ready: \(audioInput.isReadyForMoreMediaData)")
         }
         
+        // Note: Inputs should already be marked as finished by the caller
+        // We don't mark them here to avoid double-marking
+        
         // Wait for writing to complete
         try await withCheckedThrowingContinuation { continuation in
             print("💾 Calling writer.finishWriting...")
+            let startTime = Date()
+            
             writer.finishWriting {
-                print("💾 finishWriting completion handler called")
-                print("   Final writer status: \(writer.status.rawValue)")
+                let duration = Date().timeIntervalSince(startTime)
+                print("💾 finishWriting completion handler called after \(String(format: "%.2f", duration))s")
+                let statusDescription = self.writerStatusDescription(writer.status)
+                print("   Final writer status: \(writer.status.rawValue) (\(statusDescription))")
                 
                 if writer.status == .completed {
                     print("✅ Writer finalization completed successfully")
                     continuation.resume()
                 } else if let error = writer.error {
                     print("❌ Writer finalization failed with error: \(error.localizedDescription)")
+                    print("   Error domain: \(error.localizedDescription)")
                     continuation.resume(throwing: OutputError.writerCreationFailed(error))
                 } else {
                     print("❌ Writer finalization failed with unknown error")
+                    print("   Writer status: \(writer.status.rawValue)")
                     let unknownError = NSError(
                         domain: "com.swiftcapture.output",
                         code: -1,
-                        userInfo: [NSLocalizedDescriptionKey: "Unknown writing error"]
+                        userInfo: [NSLocalizedDescriptionKey: "Unknown writing error - status: \(writer.status.rawValue)"]
                     )
                     continuation.resume(throwing: OutputError.writerCreationFailed(unknownError))
                 }
@@ -379,5 +388,25 @@ class OutputManager {
         }
         
         print("💾 File finalization completed")
+    }
+    
+    /// Get human-readable description of AVAssetWriter status
+    /// - Parameter status: AVAssetWriter.Status
+    /// - Returns: Human-readable description
+    private func writerStatusDescription(_ status: AVAssetWriter.Status) -> String {
+        switch status {
+        case .unknown:
+            return "unknown"
+        case .writing:
+            return "writing"
+        case .completed:
+            return "completed"
+        case .failed:
+            return "failed"
+        case .cancelled:
+            return "cancelled"
+        @unknown default:
+            return "unknown_case_\(status.rawValue)"
+        }
     }
 }

@@ -63,9 +63,10 @@ class SignalHandler {
         // Call the interrupt handler
         onInterrupt?()
         
-        // Give more time for cleanup in recording scenarios (10 seconds)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 10.0) {
-            print("⚠️ Forced shutdown after timeout")
+        // Give more time for cleanup in recording scenarios (20 seconds)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 20.0) {
+            print("⚠️ Forced shutdown after 20 second timeout")
+            print("   File may be incomplete or corrupted")
             exit(130) // Standard exit code for SIGINT
         }
     }
@@ -90,9 +91,8 @@ extension SignalHandler {
                 progressIndicator?.stopProgress()
                 print("✅ Recording stopped gracefully")
                 
-                // Exit after graceful stop is complete
+                // Don't exit immediately - let the continuation handle the exit
                 // The timeout in handleInterrupt() will force exit if this takes too long
-                exit(130) // Standard exit code for SIGINT
             }
         }
     }

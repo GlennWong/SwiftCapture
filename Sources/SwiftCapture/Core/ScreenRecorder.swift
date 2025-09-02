@@ -114,6 +114,7 @@ class ScreenRecorder {
                             
                             // Finalize recording with proper error handling and timing
                             let finalizeStartTime = Date()
+                            print("💾 Starting file finalization (timeout: 15s)...")
                             let finalizationResult = await withTaskGroup(of: Result<Void, Error>.self) { group in
                                 // Finalization task
                                 group.addTask {
@@ -129,12 +130,12 @@ class ScreenRecorder {
                                     }
                                 }
                                 
-                                // Timeout task (8 seconds)
+                                // Timeout task (15 seconds - increased from 8 seconds)
                                 group.addTask {
                                     do {
-                                        try await Task.sleep(nanoseconds: 8_000_000_000)
+                                        try await Task.sleep(nanoseconds: 15_000_000_000)
                                         return .failure(NSError(domain: "FinalizationTimeout", code: -1, 
-                                                      userInfo: [NSLocalizedDescriptionKey: "Finalization timed out"]))
+                                                      userInfo: [NSLocalizedDescriptionKey: "File finalization timed out after 15 seconds"]))
                                     } catch {
                                         return .failure(error)
                                     }
@@ -153,14 +154,16 @@ class ScreenRecorder {
                                 print("✅ File finalized successfully in \(String(format: "%.2f", finalizeDuration))s")
                             case .failure(let error):
                                 if error.localizedDescription.contains("timed out") {
-                                    print("⚠️ Finalization timed out - file may be incomplete")
+                                    print("⚠️ File finalization timed out after \(String(format: "%.2f", finalizeDuration))s")
+                                    print("📁 The video file may be incomplete or unplayable")
+                                    print("💡 Try using shorter recording durations or check available disk space")
                                 } else {
                                     print("⚠️ Error finalizing recording after \(String(format: "%.2f", finalizeDuration))s: \(error.localizedDescription)")
-                                    print("📁 Note: Video file may be corrupted")
+                                    print("📁 The video file may be corrupted or unplayable")
                                 }
-                                // Continue with the error to be handled by continuation
-                                continuation.resume(throwing: error)
-                                return
+                                // Don't throw the error - let the program exit gracefully
+                                // The file might still be partially usable
+                                print("🔄 Attempting graceful exit despite finalization issues...")
                             }
                             
                             // Complete progress indicator
@@ -173,7 +176,9 @@ class ScreenRecorder {
                 }
                 
                 // For continuous recording, the finalization is handled in the signal handler
-                // so we skip the normal finalization flow below
+                // Exit gracefully after completion
+                print("🔄 Continuous recording completed, exiting...")
+                exit(0)
                 
             } else {
                 // Timed recording mode - wait for the exact duration
