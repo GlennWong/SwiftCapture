@@ -85,6 +85,7 @@ scap -d 30000                 # 30 seconds (short flag)
 scap --duration 120000        # 2 minutes
 
 # Both modes support early termination with Ctrl+C
+# Timed recordings require confirmation to prevent accidental termination
 ```
 
 ### Output File Management
@@ -462,6 +463,29 @@ scap --preset "tutorial" --duration 60000 --output custom.mov
 | `--save-preset <name>`   | Save current settings as preset |
 | `--preset <name>`        | Load settings from preset       |
 | `--delete-preset <name>` | Delete saved preset             |
+
+### Early Termination Behavior
+
+SwiftCapture handles Ctrl+C (SIGINT) differently based on recording mode:
+
+**Continuous Recording (no `--duration`):**
+- Ctrl+C immediately stops recording and saves the file
+- No confirmation required
+
+**Timed Recording (with `--duration`):**
+- Ctrl+C shows a confirmation prompt to prevent accidental termination
+- Type `y` or `yes` to confirm early termination
+- Press Enter or type `n`/`no` to continue recording
+- Multiple interrupts are allowed (each shows confirmation)
+
+```bash
+# Example: Timed recording with early termination
+scap --duration 60000 --output demo.mov
+# ... recording starts ...
+# Press Ctrl+C
+# Prompt: "Recording has a specified duration. Are you sure you want to stop early?"
+# Type 'y' to stop or press Enter to continue
+```
 
 ## Permissions Setup
 

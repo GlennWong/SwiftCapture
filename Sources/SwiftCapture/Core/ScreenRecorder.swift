@@ -88,7 +88,7 @@ class ScreenRecorder {
                 // Use async continuation to wait indefinitely until the signal handler stops the recording
                 try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
                     // Update the signal handler to resume the continuation when interrupted
-                    SignalHandler.shared.setupForRecording(progressIndicator: progressIndicator) {
+                    SignalHandler.shared.setupForRecording(progressIndicator: progressIndicator, onGracefulStop: {
                         // Graceful shutdown callback for continuous recording
                         // Use async/await pattern for proper concurrency handling
                         Task {
@@ -172,7 +172,7 @@ class ScreenRecorder {
                             // Resume continuation successfully
                             continuation.resume()
                         }
-                    }
+                    }, hasDuration: false)
                 }
                 
                 // For continuous recording, the finalization is handled in the signal handler
@@ -198,12 +198,12 @@ class ScreenRecorder {
                 var shouldStopEarly = false
                 var earlyTerminationReason = "Unknown"
                 
-                SignalHandler.shared.setupGracefulShutdown {
+                SignalHandler.shared.setupGracefulShutdown(onInterrupt: {
                     print("\n🛑 Early termination requested (Ctrl+C)")
                     print("   Stopping timed recording gracefully...")
                     earlyTerminationReason = "User interrupted (Ctrl+C)"
                     shouldStopEarly = true
-                }
+                }, hasDuration: true)
                 print("   Signal handler setup complete, state: \(SignalHandler.shared.isHandling ? "active" : "inactive")")
                 
                 // Wait for duration or early termination

@@ -20,7 +20,7 @@ struct HelpFormatter {
     RECORDING MODES:
       • Default: Continuous recording until Ctrl+C is pressed
       • Timed: Specify --duration in milliseconds for fixed-length recordings
-      • Always press Ctrl+C to stop recording early
+      • Early termination: Ctrl+C stops recording (requires confirmation for timed recordings)
     
     OUTPUT FORMAT:
       • Always outputs high-quality MOV format (macOS native)
