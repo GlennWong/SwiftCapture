@@ -347,7 +347,7 @@ class OutputManager {
         // This avoids double-marking which could cause issues
         
         print("💾 Starting file finalization...")
-        print("   Writer status: \(writer.status.rawValue) (\(writerStatusDescription(writer.status)))")
+        print("   Writer status: \(writer.status.rawValue) (\(Self.writerStatusDescription(writer.status)))")
         print("   Video input ready: \(videoInput.isReadyForMoreMediaData)")
         if let audioInput = audioInput {
             print("   Audio input ready: \(audioInput.isReadyForMoreMediaData)")
@@ -364,7 +364,7 @@ class OutputManager {
             writer.finishWriting {
                 let duration = Date().timeIntervalSince(startTime)
                 print("💾 finishWriting completion handler called after \(String(format: "%.2f", duration))s")
-                let statusDescription = self.writerStatusDescription(writer.status)
+                let statusDescription = Self.writerStatusDescription(writer.status)
                 print("   Final writer status: \(writer.status.rawValue) (\(statusDescription))")
                 
                 if writer.status == .completed {
@@ -393,7 +393,7 @@ class OutputManager {
     /// Get human-readable description of AVAssetWriter status
     /// - Parameter status: AVAssetWriter.Status
     /// - Returns: Human-readable description
-    private func writerStatusDescription(_ status: AVAssetWriter.Status) -> String {
+    private static func writerStatusDescription(_ status: AVAssetWriter.Status) -> String {
         switch status {
         case .unknown:
             return "unknown"
