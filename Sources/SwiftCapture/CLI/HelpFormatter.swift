@@ -16,6 +16,7 @@ struct HelpFormatter {
       scap --app Safari --duration 15000                  # Record Safari for 15 seconds
       scap --screen-list --json                           # List screens in JSON format
       scap --app-list --json                              # List applications in JSON format
+      scap --duration 30000 --verbose                     # Show detailed configuration and debug info
     
     RECORDING MODES:
       • Default: Continuous recording until Ctrl+C is pressed

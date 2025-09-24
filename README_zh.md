@@ -177,6 +177,10 @@ scap --quality high           # 最佳质量（~10Mbps）
 
 # 输出格式始终为 MOV（QuickTime）
 # 高质量的 macOS 原生格式，具有出色的兼容性
+
+# 详细输出用于调试
+scap --verbose                # 显示详细配置和调试信息
+scap --duration 30000 --verbose --quality high  # 与其他选项组合使用
 ```
 
 ### 高级功能
@@ -419,14 +423,15 @@ scap --preset "tutorial" --duration 60000 --output custom.mov
 
 ### 信息命令
 
-| 命令                  | 描述                     |
-| --------------------- | ------------------------ |
-| `--help`, `-h`        | 显示全面帮助和示例       |
-| `--version`           | 显示版本信息             |
-| `--screen-list`, `-l` | 列出可用屏幕及详细信息   |
-| `--app-list`, `-L`    | 列出运行中的应用程序     |
-| `--list-presets`      | 显示所有保存的预设       |
-| `--json`              | 以 JSON 格式输出列表结果 |
+| 命令                  | 描述                             |
+| --------------------- | -------------------------------- |
+| `--help`, `-h`        | 显示全面帮助和示例               |
+| `--version`           | 显示版本信息                     |
+| `--verbose`           | 启用详细输出，显示配置和调试信息 |
+| `--screen-list`, `-l` | 列出可用屏幕及详细信息           |
+| `--app-list`, `-L`    | 列出运行中的应用程序             |
+| `--list-presets`      | 显示所有保存的预设               |
+| `--json`              | 以 JSON 格式输出列表结果         |
 
 ### 录制选项
 
@@ -846,6 +851,10 @@ swift run SwiftCapture --duration 5000 --output test.mov
 # 构建并运行发布版本
 swift build -c release
 .build/release/SwiftCapture --screen-list
+.build/release/SwiftCapture --help
+
+.build/release/SwiftCapture
+.build/release/SwiftCapture --duration 5000
 ```
 
 ## 贡献

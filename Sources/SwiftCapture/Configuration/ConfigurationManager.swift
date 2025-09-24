@@ -129,7 +129,8 @@ class ConfigurationManager {
             targetApplication: targetApplication,
             audioSettings: audioSettings,
             videoSettings: finalVideoSettings,
-            countdown: command.countdown
+            countdown: command.countdown,
+            verbose: command.verbose
         )
         
         return configuration
@@ -295,7 +296,8 @@ class ConfigurationManager {
             targetApplication: application,
             audioSettings: configuration.audioSettings,
             videoSettings: updatedVideoSettings,
-            countdown: configuration.countdown
+            countdown: configuration.countdown,
+            verbose: configuration.verbose
         )
     }
 }

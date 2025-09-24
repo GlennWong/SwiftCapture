@@ -31,18 +31,27 @@ class ScreenRecorder {
         // Resolve screen and application information
         let finalConfig = try await resolveConfiguration(config)
         
-        print("🎬 Starting recording with configuration:")
-        print("   \(finalConfig)")
-        print("📝 Recording details:")
-        print("   Mode: \(finalConfig.duration < 0 ? "Continuous" : "Timed")")
-        if finalConfig.duration >= 0 {
-            print("   Duration: \(String(format: "%.2f", finalConfig.duration))s (\(Int(finalConfig.duration * 1000))ms)")
+        if finalConfig.verbose {
+            print("🎬 Starting recording with configuration:")
+            print("   \(finalConfig)")
+            print("📝 Recording details:")
+            print("   Mode: \(finalConfig.duration < 0 ? "Continuous" : "Timed")")
+            if finalConfig.duration >= 0 {
+                print("   Duration: \(String(format: "%.2f", finalConfig.duration))s (\(Int(finalConfig.duration * 1000))ms)")
+            }
+            print("   Output: \(finalConfig.outputURL.path)")
+            print("   Resolution: \(Int(finalConfig.videoSettings.resolution.width)) × \(Int(finalConfig.videoSettings.resolution.height))")
+            print("   Frame rate: \(finalConfig.videoSettings.fps) fps")
+            print("   Quality: \(finalConfig.videoSettings.quality.rawValue)")
+        } else {
+            // Simplified output for non-verbose mode
+            if finalConfig.duration < 0 {
+                print("🛑 Mode: Continuous recording (press Ctrl+C to stop)")
+            } else {
+                print("🔴 Mode: Timed recording (\(String(format: "%.1f", finalConfig.duration))s)")
+            }
+            print("   Output: \(finalConfig.outputURL.path)")
         }
-        print("   Output: \(finalConfig.outputURL.path)")
-        print("   Resolution: \(Int(finalConfig.videoSettings.resolution.width)) × \(Int(finalConfig.videoSettings.resolution.height))")
-        print("   Frame rate: \(finalConfig.videoSettings.fps) fps")
-        print("   Quality: \(finalConfig.videoSettings.quality.rawValue)")
-        
         // Show countdown if configured
         if finalConfig.countdown > 0 {
             try await showCountdown(finalConfig.countdown)
@@ -114,7 +123,9 @@ class ScreenRecorder {
                             
                             // Finalize recording with proper error handling and timing
                             let finalizeStartTime = Date()
-                            print("💾 Starting file finalization (timeout: 15s)...")
+                            if finalConfig.verbose {
+                                print("💾 Starting file finalization (timeout: 15s)...")
+                            }
                             let finalizationResult = await withTaskGroup(of: Result<Void, Error>.self) { group in
                                 // Finalization task
                                 group.addTask {
@@ -122,7 +133,8 @@ class ScreenRecorder {
                                         try await self.outputManager.finalizeRecording(
                                             writer: writer,
                                             videoInput: videoInput,
-                                            audioInput: audioInput
+                                            audioInput: audioInput,
+                                            verbose: finalConfig.verbose
                                         )
                                         return .success(())
                                     } catch {
@@ -183,17 +195,19 @@ class ScreenRecorder {
             } else {
                 // Timed recording mode - wait for the exact duration
                 let durationSeconds = finalConfig.duration
-                print("🕰️ Starting timed recording for \(String(format: "%.2f", durationSeconds)) seconds (\(String(format: "%.0f", durationSeconds * 1000)) ms)")
-                
-                // Enhanced logging for debugging duration issues
-                print("🔍 Debug Info:")
-                print("   Target duration: \(durationSeconds) seconds (\(Int(durationSeconds * 1000)) ms)")
-                print("   Signal handler state before setup: \(SignalHandler.shared.isHandling ? "active" : "inactive")")
-                
+                if finalConfig.verbose {
+                    print("🕰️ Starting timed recording for \(String(format: "%.2f", durationSeconds)) seconds (\(String(format: "%.0f", durationSeconds * 1000)) ms)")
+                    
+                    // Enhanced logging for debugging duration issues
+                    print("🔍 Debug Info:")
+                    print("   Target duration: \(durationSeconds) seconds (\(Int(durationSeconds * 1000)) ms)")
+                    print("   Signal handler state before setup: \(SignalHandler.shared.isHandling ? "active" : "inactive")")
+                }
                 // Clean up any existing signal handlers to ensure fresh start
                 SignalHandler.shared.cleanup()
-                print("   Signal handler cleaned up, state: \(SignalHandler.shared.isHandling ? "active" : "inactive")")
-                
+                if finalConfig.verbose {
+                    print("   Signal handler cleaned up, state: \(SignalHandler.shared.isHandling ? "active" : "inactive")")
+                }
                 // Set up a gentle signal handler that allows early termination but doesn't exit immediately
                 var shouldStopEarly = false
                 var earlyTerminationReason = "Unknown"
@@ -204,8 +218,9 @@ class ScreenRecorder {
                     earlyTerminationReason = "User interrupted (Ctrl+C)"
                     shouldStopEarly = true
                 }, hasDuration: true)
-                print("   Signal handler setup complete, state: \(SignalHandler.shared.isHandling ? "active" : "inactive")")
-                
+                if finalConfig.verbose {
+                    print("   Signal handler setup complete, state: \(SignalHandler.shared.isHandling ? "active" : "inactive")")
+                }
                 // Wait for duration or early termination
                 let startTime = Date()
                 let expectedEndTime = startTime.addingTimeInterval(durationSeconds)
@@ -216,10 +231,11 @@ class ScreenRecorder {
                 var lastLogTime = startTime
                 var lastDurationCheckTime = startTime
                 
-                print("🚀 Starting recording loop at \(startTime)")
-                print("🎯 Expected end time: \(expectedEndTime) (\(String(format: "%.1f", durationSeconds))s later)")
-                print("⚙️ Acceptable error margin: ±\(acceptableErrorMargin)s")
-                
+                if finalConfig.verbose {
+                    print("🚀 Starting recording loop at \(startTime)")
+                    print("🎯 Expected end time: \(expectedEndTime) (\(String(format: "%.1f", durationSeconds))s later)")
+                    print("⚙️ Acceptable error margin: ±\(acceptableErrorMargin)s")
+                }
                 while !shouldStopEarly {
                     let elapsed = Date().timeIntervalSince(startTime)
                     let currentTime = Date()
@@ -366,7 +382,9 @@ class ScreenRecorder {
             
             // Finalize output with timeout protection
             let finalizeStartTime = Date()
-            print("💾 Starting file finalization...")
+            if finalConfig.verbose {
+                print("💾 Starting file finalization...")
+            }
             do {
                 try await withThrowingTaskGroup(of: Void.self) { group in
                     // 文件写入任务
@@ -374,7 +392,8 @@ class ScreenRecorder {
                         try await self.outputManager.finalizeRecording(
                             writer: writer,
                             videoInput: videoInput,
-                            audioInput: audioInput
+                            audioInput: audioInput,
+                            verbose: finalConfig.verbose
                         )
                     }
                     
@@ -456,7 +475,8 @@ class ScreenRecorder {
                 targetApplication: config.targetApplication,
                 audioSettings: config.audioSettings,
                 videoSettings: config.videoSettings,
-                countdown: config.countdown
+                countdown: config.countdown,
+                verbose: config.verbose
             )
         }
         
@@ -546,7 +566,8 @@ class ScreenRecorder {
             targetApplication: resolvedConfig.targetApplication,
             audioSettings: resolvedConfig.audioSettings,
             videoSettings: updatedVideoSettings,
-            countdown: resolvedConfig.countdown
+            countdown: resolvedConfig.countdown,
+            verbose: resolvedConfig.verbose
         )
         
         return resolvedConfig

@@ -253,7 +253,9 @@ class CaptureController {
             do {
                 if #available(macOS 13.0, *) {
                     try stream.addStreamOutput(delegate, type: .audio, sampleHandlerQueue: audioQueue)
-                    print("✅ System audio stream added successfully")
+                    if config.verbose {
+                        print("✅ System audio stream added successfully")
+                    }
                 }
             } catch {
                 print("⚠️ Warning: Failed to add system audio output: \(error.localizedDescription)")
@@ -377,19 +379,21 @@ class CaptureController {
             }
         }
         
-        print("📹 Capture Configuration:")
-        print("   Recording Mode: \(config.recordingMode)")
-        if let screen = config.targetScreen {
-            print("   Target Screen: \(screen.index) (\(screen.name))")
-            print("   Screen Frame: \(screen.frame)")
-            print("   Scale Factor: \(screen.scaleFactor)x")
+        // Log capture configuration only in verbose mode
+        if config.verbose {
+            print("📹 Capture Configuration:")
+            print("   Recording Mode: \(config.recordingMode)")
+            if let screen = config.targetScreen {
+                print("   Target Screen: \(screen.index) (\(screen.name))")
+                print("   Screen Frame: \(screen.frame)")
+                print("   Scale Factor: \(screen.scaleFactor)x")
+            }
+            print("   Source Rect: \(sourceRect)")
+            print("   Output Size: \(Int(outputSize.width)) × \(Int(outputSize.height))")
+            print("   Frame Rate: \(config.videoSettings.fps) fps")
+            print("   Show Cursor: \(config.videoSettings.showCursor)")
+            print("   Audio Enabled: \(config.audioSettings.hasAudio)")
         }
-        print("   Source Rect: \(sourceRect)")
-        print("   Output Size: \(Int(outputSize.width)) × \(Int(outputSize.height))")
-        print("   Frame Rate: \(config.videoSettings.fps) fps")
-        print("   Show Cursor: \(config.videoSettings.showCursor)")
-        print("   Audio Enabled: \(config.audioSettings.hasAudio)")
-        
         return streamConfig
     }
     

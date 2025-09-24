@@ -178,6 +178,10 @@ scap --quality high           # Best quality (~10Mbps)
 
 # Output is always in MOV format (QuickTime)
 # High-quality, macOS-native format with excellent compatibility
+
+# Verbose output for debugging
+scap --verbose                # Show detailed configuration and debug information
+scap --duration 30000 --verbose --quality high  # Combine with other options
 ```
 
 ### Advanced Features
@@ -424,6 +428,7 @@ scap --preset "tutorial" --duration 60000 --output custom.mov
 | --------------------- | ------------------------------------ |
 | `--help`, `-h`        | Show comprehensive help and examples |
 | `--version`           | Display version information          |
+| `--verbose`           | Enable verbose output with detailed configuration and debug info |
 | `--screen-list`, `-l` | List available screens with details  |
 | `--app-list`, `-L`    | List running applications            |
 | `--list-presets`      | Show all saved presets               |

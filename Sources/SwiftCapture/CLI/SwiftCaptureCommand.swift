@@ -96,6 +96,9 @@ struct SwiftCaptureCommand: AsyncParsableCommand {
     @Flag(help: "Output list results in JSON format for programmatic use")
     var json: Bool = false
     
+    @Flag(help: "Enable verbose output showing detailed configuration and debug information")
+    var verbose: Bool = false
+    
     // MARK: - Validation
     func validate() throws {
         // Check system requirements first

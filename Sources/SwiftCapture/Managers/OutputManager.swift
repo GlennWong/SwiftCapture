@@ -152,11 +152,13 @@ class OutputManager {
         // MOV format supports all resolutions and frame rates natively
         // No additional validation needed for MOV format
         
-        // Log format selection
-        print("📹 Format Configuration:")
-        print("   Format: \(format.description)")
-        print("   Codec: \(codec.rawValue.uppercased())")
-        print("   Compatibility: ✅ Validated")
+        // Log format selection only in verbose mode
+        if config.verbose {
+            print("📹 Format Configuration:")
+            print("   Format: \(format.description)")
+            print("   Codec: \(codec.rawValue.uppercased())")
+            print("   Compatibility: ✅ Validated")
+        }
     }
     
     /// Get optimized codec for format and quality settings
@@ -318,15 +320,17 @@ class OutputManager {
         // Start writing (but not session - that's handled by CaptureController)
         writer.startWriting()
         
-        // Log configuration
-        print("📁 Output Configuration:")
-        print("   File: \(config.outputURL.lastPathComponent)")
-        print("   Format: \(config.outputFormat.rawValue.uppercased())")
-        print("   Video Settings: \(config.videoSettings.fps)fps, \(config.videoSettings.quality.rawValue) quality")
-        if audioInput != nil {
-            print("   Audio Settings: \(config.audioSettings.quality.rawValue) quality, \(config.audioSettings.sampleRate) Hz")
-        } else {
-            print("   Audio: disabled")
+        // Log configuration only in verbose mode
+        if config.verbose {
+            print("📁 Output Configuration:")
+            print("   File: \(config.outputURL.lastPathComponent)")
+            print("   Format: \(config.outputFormat.rawValue.uppercased())")
+            print("   Video Settings: \(config.videoSettings.fps)fps, \(config.videoSettings.quality.rawValue) quality")
+            if audioInput != nil {
+                print("   Audio Settings: \(config.audioSettings.quality.rawValue) quality, \(config.audioSettings.sampleRate) Hz")
+            } else {
+                print("   Audio: disabled")
+            }
         }
         
         return (writer: writer, videoInput: videoInput, audioInput: audioInput, adaptor: adaptor)
@@ -337,20 +341,24 @@ class OutputManager {
     ///   - writer: AVAssetWriter to finalize
     ///   - videoInput: Video input to mark as finished
     ///   - audioInput: Optional audio input to mark as finished
+    ///   - verbose: Whether to show verbose output
     /// - Throws: OutputError if finalization fails
     func finalizeRecording(
         writer: AVAssetWriter,
         videoInput: AVAssetWriterInput,
-        audioInput: AVAssetWriterInput?
+        audioInput: AVAssetWriterInput?,
+        verbose: Bool = false
     ) async throws {
         // Inputs should already be marked as finished by the caller
         // This avoids double-marking which could cause issues
         
-        print("💾 Starting file finalization...")
-        print("   Writer status: \(writer.status.rawValue) (\(Self.writerStatusDescription(writer.status)))")
-        print("   Video input ready: \(videoInput.isReadyForMoreMediaData)")
-        if let audioInput = audioInput {
-            print("   Audio input ready: \(audioInput.isReadyForMoreMediaData)")
+        if verbose {
+            print("💾 Starting file finalization...")
+            print("   Writer status: \(writer.status.rawValue) (\(Self.writerStatusDescription(writer.status)))")
+            print("   Video input ready: \(videoInput.isReadyForMoreMediaData)")
+            if let audioInput = audioInput {
+                print("   Audio input ready: \(audioInput.isReadyForMoreMediaData)")
+            }
         }
         
         // Note: Inputs should already be marked as finished by the caller
@@ -358,25 +366,35 @@ class OutputManager {
         
         // Wait for writing to complete
         try await withCheckedThrowingContinuation { continuation in
-            print("💾 Calling writer.finishWriting...")
+            if verbose {
+                print("💾 Calling writer.finishWriting...")
+            }
             let startTime = Date()
             
             writer.finishWriting {
                 let duration = Date().timeIntervalSince(startTime)
-                print("💾 finishWriting completion handler called after \(String(format: "%.2f", duration))s")
-                let statusDescription = Self.writerStatusDescription(writer.status)
-                print("   Final writer status: \(writer.status.rawValue) (\(statusDescription))")
+                if verbose {
+                    print("💾 finishWriting completion handler called after \(String(format: "%.2f", duration))s")
+                    let statusDescription = Self.writerStatusDescription(writer.status)
+                    print("   Final writer status: \(writer.status.rawValue) (\(statusDescription))")
+                }
                 
                 if writer.status == .completed {
-                    print("✅ Writer finalization completed successfully")
+                    if verbose {
+                        print("✅ Writer finalization completed successfully")
+                    }
                     continuation.resume()
                 } else if let error = writer.error {
-                    print("❌ Writer finalization failed with error: \(error.localizedDescription)")
-                    print("   Error domain: \(error.localizedDescription)")
+                    if verbose {
+                        print("❌ Writer finalization failed with error: \(error.localizedDescription)")
+                        print("   Error domain: \(error.localizedDescription)")
+                    }
                     continuation.resume(throwing: OutputError.writerCreationFailed(error))
                 } else {
-                    print("❌ Writer finalization failed with unknown error")
-                    print("   Writer status: \(writer.status.rawValue)")
+                    if verbose {
+                        print("❌ Writer finalization failed with unknown error")
+                        print("   Writer status: \(writer.status.rawValue)")
+                    }
                     let unknownError = NSError(
                         domain: "com.swiftcapture.output",
                         code: -1,
@@ -387,7 +405,9 @@ class OutputManager {
             }
         }
         
-        print("💾 File finalization completed")
+        if verbose {
+            print("💾 File finalization completed")
+        }
     }
     
     /// Get human-readable description of AVAssetWriter status

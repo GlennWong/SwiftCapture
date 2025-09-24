@@ -143,7 +143,8 @@ struct RecordingPreset: Codable {
             targetApplication: targetApplication,
             audioSettings: audioSettings,
             videoSettings: videoSettings,
-            countdown: countdown
+            countdown: countdown,
+            verbose: false // Presets don't store verbose setting
         )
     }
 }

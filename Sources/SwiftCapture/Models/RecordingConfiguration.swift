@@ -109,6 +109,9 @@ struct RecordingConfiguration {
     /// Countdown before recording starts (in seconds)
     let countdown: Int
     
+    /// Enable verbose output for detailed logging
+    let verbose: Bool
+    
     /// Recording mode based on configuration
     var recordingMode: RecordingMode {
         if targetApplication != nil {
@@ -144,7 +147,8 @@ extension RecordingConfiguration {
             targetApplication: nil,
             audioSettings: .default(),
             videoSettings: .default(resolution: resolution),
-            countdown: 0
+            countdown: 0,
+            verbose: false
         )
     }
 }
