@@ -6,12 +6,14 @@ class ConfigurationManager {
     
     private let validator: ParameterValidator
     private let presetStorage: PresetStorage
+    private let audioPresetManager: AudioPresetManager
     
     /// Initialize configuration manager
     /// - Throws: Error if preset storage cannot be initialized
     init() throws {
         self.validator = ParameterValidator()
         self.presetStorage = try PresetStorage()
+        self.audioPresetManager = try AudioPresetManager()
     }
     
     /// Create recording configuration from CLI command
@@ -83,6 +85,9 @@ class ConfigurationManager {
         let outputURL = try validator.validateOutputPath(command.output, format: outputFormat, overwrite: command.force)
         try validator.checkDiskSpace(for: outputURL)
         
+        // Create audio enhancement settings
+        let enhancementSettings = try createAudioEnhancementSettings(from: command, baseConfig: baseConfig)
+        
         // Create audio settings
         let audioSettings = AudioSettings(
             includeMicrophone: command.enableMicrophone,
@@ -91,7 +96,10 @@ class ConfigurationManager {
             quality: baseConfig?.audioSettings.quality ?? .medium,
             sampleRate: baseConfig?.audioSettings.sampleRate ?? AudioQuality.medium.sampleRate,
             bitRate: baseConfig?.audioSettings.bitRate ?? AudioQuality.medium.bitRate,
-            channels: 2
+            channels: 2,
+            enhancementSettings: enhancementSettings,
+            qualityMonitoringEnabled: command.audioMonitor || command.audioSpectrum || command.audioEnhancement,
+            processingEnabled: command.audioEnhancement
         )
         
 
@@ -299,5 +307,323 @@ class ConfigurationManager {
             countdown: configuration.countdown,
             verbose: configuration.verbose
         )
+    }
+    
+    // MARK: - Audio Preset Management
+    
+    /// Save current audio settings as a custom preset
+    /// - Parameters:
+    ///   - name: Preset name
+    ///   - settings: Audio enhancement settings to save
+    ///   - description: Optional description
+    /// - Throws: ValidationError if preset name is invalid or already exists
+    func saveAudioPreset(named name: String, settings: AudioEnhancementSettings, description: String? = nil) throws {
+        try validator.validatePresetName(name)
+        
+        if audioPresetManager.customPresetExists(named: name) {
+            throw ValidationError.presetAlreadyExists(name)
+        }
+        
+        // Validate settings before saving
+        let validationResult = audioPresetManager.validatePresetSettings(settings)
+        if !validationResult.isValid {
+            let errors = validationResult.errors.joined(separator: ", ")
+            throw ValidationError(
+                "Invalid audio preset settings: \(errors)",
+                suggestion: "Check your audio enhancement parameters and ensure they are within valid ranges"
+            )
+        }
+        
+        try audioPresetManager.saveCustomPreset(named: name, settings: settings)
+        print("✅ Audio preset '\(name)' saved successfully")
+        
+        // Show warnings if any
+        if !validationResult.warnings.isEmpty {
+            print("⚠️ Warnings:")
+            for warning in validationResult.warnings {
+                print("   • \(warning)")
+            }
+        }
+        
+        // Show suggestions if any
+        if !validationResult.suggestions.isEmpty {
+            print("💡 Suggestions:")
+            for suggestion in validationResult.suggestions {
+                print("   • \(suggestion)")
+            }
+        }
+    }
+    
+    /// Load an audio preset by name or type
+    /// - Parameter presetIdentifier: Preset name (for custom) or preset type
+    /// - Returns: AudioEnhancementSettings
+    /// - Throws: ValidationError if preset doesn't exist or is invalid
+    func loadAudioPreset(_ presetIdentifier: String) throws -> AudioEnhancementSettings {
+        // First try to parse as built-in preset
+        if let builtInPreset = AudioPreset(rawValue: presetIdentifier.lowercased()) {
+            return try audioPresetManager.loadPreset(builtInPreset)
+        }
+        
+        // If not a built-in preset, try to load as custom preset
+        return try audioPresetManager.loadCustomPreset(named: presetIdentifier)
+    }
+    
+    /// List all available audio presets (built-in and custom)
+    /// - Parameter jsonOutput: Whether to output in JSON format
+    /// - Throws: Error if presets cannot be listed
+    func listAudioPresets(jsonOutput: Bool = false) throws {
+        let customPresets = try audioPresetManager.getAllCustomPresets()
+        let builtInPresets = AudioPreset.allCases.filter { $0 != .custom }
+        
+        if jsonOutput {
+            let output = AudioPresetListJSON(
+                builtInPresets: builtInPresets.map { preset in
+                    AudioPresetInfo(
+                        name: preset.rawValue,
+                        type: "built-in",
+                        description: getPresetDescription(preset),
+                        settings: preset.defaultSettings
+                    )
+                },
+                customPresets: customPresets.map { preset in
+                    AudioPresetInfo(
+                        name: preset.name,
+                        type: "custom",
+                        description: preset.description ?? "Custom audio preset",
+                        settings: preset.settings,
+                        createdAt: preset.createdAt,
+                        lastUsed: preset.lastUsed
+                    )
+                }
+            )
+            print(try output.toJSONString())
+        } else {
+            print("Available Audio Presets:")
+            print("========================")
+            
+            // Show built-in presets
+            print("\n🔧 Built-in Presets:")
+            for preset in builtInPresets {
+                print("   📋 \(preset.rawValue)")
+                print("      \(getPresetDescription(preset))")
+                let settings = preset.defaultSettings
+                print("      Gain: \(settings.masterGain) dB, Compression: \(settings.compressionRatio):1")
+            }
+            
+            // Show custom presets
+            if !customPresets.isEmpty {
+                print("\n🎨 Custom Presets:")
+                for preset in customPresets {
+                    print("   📋 \(preset.name)")
+                    if let description = preset.description {
+                        print("      \(description)")
+                    }
+                    let settings = preset.settings
+                    print("      Gain: \(settings.masterGain) dB, Compression: \(settings.compressionRatio):1")
+                    
+                    let dateFormatter = DateFormatter()
+                    dateFormatter.dateStyle = .short
+                    dateFormatter.timeStyle = .short
+                    
+                    print("      Created: \(dateFormatter.string(from: preset.createdAt))")
+                    if let lastUsed = preset.lastUsed {
+                        print("      Last used: \(dateFormatter.string(from: lastUsed))")
+                    }
+                }
+            } else {
+                print("\n🎨 Custom Presets: None")
+                print("   Create custom presets with --save-audio-preset <name>")
+            }
+            
+            print("\nUsage:")
+            print("  --audio-preset speech              # Use built-in speech preset")
+            print("  --audio-preset my-custom          # Use custom preset")
+            print("  --save-audio-preset my-config     # Save current settings as preset")
+        }
+    }
+    
+    /// Delete an audio preset
+    /// - Parameter name: Preset name
+    /// - Throws: ValidationError if preset doesn't exist or is built-in
+    func deleteAudioPreset(named name: String) throws {
+        // Prevent deletion of built-in presets
+        if AudioPreset(rawValue: name.lowercased()) != nil {
+            throw ValidationError(
+                "Cannot delete built-in preset '\(name)'",
+                suggestion: "Only custom presets can be deleted"
+            )
+        }
+        
+        try audioPresetManager.deleteCustomPreset(named: name)
+        print("✅ Audio preset '\(name)' deleted successfully")
+    }
+    
+    /// Get recommended audio preset for content type
+    /// - Parameter contentType: Type of content being recorded
+    /// - Returns: Recommended AudioPreset
+    func getRecommendedAudioPreset(for contentType: AudioPresetContentType) -> AudioPreset {
+        return audioPresetManager.getRecommendedPreset(for: contentType)
+    }
+    
+    /// Validate audio preset settings and provide feedback
+    /// - Parameter settings: Settings to validate
+    /// - Returns: Validation result with suggestions
+    func validateAudioPresetSettings(_ settings: AudioEnhancementSettings) -> AudioPresetValidationResult {
+        return audioPresetManager.validatePresetSettings(settings)
+    }
+    
+    // MARK: - Private Helper Methods
+    
+    /// Get description for built-in presets
+    /// - Parameter preset: Audio preset
+    /// - Returns: Description string
+    private func getPresetDescription(_ preset: AudioPreset) -> String {
+        switch preset {
+        case .speech:
+            return "Optimized for voice recordings and meetings"
+        case .music:
+            return "Preserves full frequency range for music content"
+        case .gaming:
+            return "Enhanced for game audio and streaming"
+        case .balanced:
+            return "General purpose preset for mixed content"
+        case .custom:
+            return "User-defined custom settings"
+        }
+    }
+    
+    // MARK: - Audio Enhancement Configuration
+    
+    /// Create audio enhancement settings from CLI command
+    /// - Parameters:
+    ///   - command: SwiftCaptureCommand with CLI options
+    ///   - baseConfig: Base configuration from preset (optional)
+    /// - Returns: Configured AudioEnhancementSettings
+    /// - Throws: ValidationError if settings are invalid
+    private func createAudioEnhancementSettings(from command: SwiftCaptureCommand, baseConfig: RecordingConfiguration?) throws -> AudioEnhancementSettings {
+        
+        // Start with base settings from preset or default
+        var settings: AudioEnhancementSettings
+        
+        if let baseConfig = baseConfig {
+            settings = baseConfig.audioSettings.enhancementSettings
+        } else {
+            // Try to load audio preset (built-in or custom)
+            do {
+                settings = try loadAudioPreset(command.audioPreset)
+            } catch {
+                // If preset loading fails, try parsing as built-in preset
+                guard let preset = AudioPreset(rawValue: command.audioPreset.lowercased()) else {
+                    throw ValidationError(
+                        "Invalid audio preset: '\(command.audioPreset)'",
+                        suggestion: "Use speech, music, gaming, balanced, or a custom preset name"
+                    )
+                }
+                settings = AudioEnhancementSettings.from(preset: preset)
+            }
+        }
+        
+        // Apply command-line overrides
+        if let gain = command.audioGain {
+            settings.masterGain = gain
+            settings.preset = .custom // Mark as custom when manually modified
+        }
+        
+        if command.autoGain {
+            settings.autoGainEnabled = true
+        }
+        
+        if let ratio = command.compressionRatio {
+            settings.compressionRatio = ratio
+            settings.preset = .custom
+        }
+        
+        if let threshold = command.limiterThreshold {
+            settings.limiterThreshold = threshold
+            settings.preset = .custom
+        }
+        
+        if command.qualityProtection {
+            settings.qualityProtectionEnabled = true
+        }
+        
+        if command.losslessMode {
+            settings.losslessModeEnabled = true
+            settings.preset = .custom
+        }
+        
+        if command.qualityComparison {
+            settings.qualityComparisonEnabled = true
+        }
+        
+        // Enable processing if enhancement is requested
+        if command.audioEnhancement {
+            settings.processingEnabled = true
+        }
+        
+        // Enable quality monitoring if requested
+        if command.audioMonitor || command.audioSpectrum {
+            settings.qualityMonitoringEnabled = true
+        }
+        
+        // Enable quality comparison automatically if quality protection is enabled
+        if command.qualityProtection && !command.qualityComparison {
+            settings.qualityComparisonEnabled = true
+        }
+        
+        // Audio preview requires enhancement to be enabled
+        if command.audioPreview && !command.audioEnhancement {
+            throw ValidationError(
+                "Audio preview requires audio enhancement to be enabled",
+                suggestion: "Use --audio-enhancement along with --audio-preview"
+            )
+        }
+        
+        // Validate final settings
+        if !settings.isValid {
+            let errors = settings.validationErrors.joined(separator: ", ")
+            throw ValidationError(
+                "Invalid audio enhancement settings: \(errors)",
+                suggestion: "Check your audio enhancement parameters and ensure they are within valid ranges"
+            )
+        }
+        
+        return settings
+    }
+}
+
+// MARK: - Audio Preset JSON Models
+
+/// JSON model for audio preset information
+struct AudioPresetInfo: Codable {
+    let name: String
+    let type: String // "built-in" or "custom"
+    let description: String
+    let settings: AudioEnhancementSettings
+    let createdAt: Date?
+    let lastUsed: Date?
+    
+    init(name: String, type: String, description: String, settings: AudioEnhancementSettings, createdAt: Date? = nil, lastUsed: Date? = nil) {
+        self.name = name
+        self.type = type
+        self.description = description
+        self.settings = settings
+        self.createdAt = createdAt
+        self.lastUsed = lastUsed
+    }
+}
+
+/// JSON model for listing audio presets
+struct AudioPresetListJSON: Codable {
+    let builtInPresets: [AudioPresetInfo]
+    let customPresets: [AudioPresetInfo]
+    
+    func toJSONString() throws -> String {
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        encoder.outputFormatting = .prettyPrinted
+        
+        let data = try encoder.encode(self)
+        return String(data: data, encoding: .utf8) ?? ""
     }
 }

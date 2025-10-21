@@ -201,7 +201,8 @@ final class PresetStorageTests: XCTestCase {
             targetApplication: config.targetApplication,
             audioSettings: config.audioSettings,
             videoSettings: config.videoSettings,
-            countdown: config.countdown
+            countdown: config.countdown,
+            verbose: config.verbose
         )
         
         let presetName = "area-test"
@@ -258,7 +259,10 @@ final class PresetStorageTests: XCTestCase {
                 quality: .medium,
                 sampleRate: 44100,
                 bitRate: 128000,
-                channels: 2
+                channels: 2,
+                enhancementSettings: AudioEnhancementSettings(),
+                qualityMonitoringEnabled: true,
+                processingEnabled: false
             ),
             videoSettings: VideoSettings(
                 fps: 30,
@@ -267,7 +271,8 @@ final class PresetStorageTests: XCTestCase {
                 showCursor: false,
                 resolution: CGSize(width: 1920, height: 1080)
             ),
-            countdown: 0
+            countdown: 0,
+            verbose: false
         )
     }
 }

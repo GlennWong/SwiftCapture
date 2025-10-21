@@ -64,6 +64,43 @@ struct SwiftCaptureCommand: AsyncParsableCommand {
     @Flag(name: [.customLong("system-audio-only")], help: "Force system-wide audio recording (ignores app-specific audio when recording apps)")
     var systemAudioOnly: Bool = false
     
+    // MARK: - Audio Enhancement Options
+    @Flag(name: [.customLong("audio-enhancement")], help: "Enable audio volume enhancement and processing")
+    var audioEnhancement: Bool = false
+    
+    @Option(name: [.customLong("audio-gain")], help: "Audio gain adjustment in dB (-20.0 to +20.0, default: 0.0)")
+    var audioGain: Float?
+    
+    @Flag(name: [.customLong("auto-gain")], help: "Enable automatic gain control")
+    var autoGain: Bool = false
+    
+    @Option(name: [.customLong("audio-preset")], help: "Audio enhancement preset: speech, music, gaming, balanced, custom (default: balanced)")
+    var audioPreset: String = "balanced"
+    
+    @Option(name: [.customLong("compression-ratio")], help: "Audio compression ratio (1.0 = no compression, higher = more compression, default: 3.0)")
+    var compressionRatio: Float?
+    
+    @Option(name: [.customLong("limiter-threshold")], help: "Audio limiter threshold in dBFS (-10.0 to 0.0, default: -1.0)")
+    var limiterThreshold: Float?
+    
+    @Flag(name: [.customLong("quality-protection")], help: "Enable audio quality protection mechanisms")
+    var qualityProtection: Bool = false
+    
+    @Flag(name: [.customLong("lossless-mode")], help: "Enable lossless audio enhancement mode")
+    var losslessMode: Bool = false
+    
+    @Flag(name: [.customLong("quality-comparison")], help: "Enable quality comparison between original and processed audio")
+    var qualityComparison: Bool = false
+    
+    @Flag(name: [.customLong("audio-monitor")], help: "Display real-time audio level monitoring")
+    var audioMonitor: Bool = false
+    
+    @Flag(name: [.customLong("audio-spectrum")], help: "Display real-time frequency spectrum analysis")
+    var audioSpectrum: Bool = false
+    
+    @Flag(name: [.customLong("audio-preview")], help: "Enable real-time audio effect preview (requires audio enhancement)")
+    var audioPreview: Bool = false
+    
     // MARK: - Advanced Recording Options
     @Option(help: "Frame rate: 15, 30, or 60 fps (default: 30)")
     var fps: Int = 30
@@ -92,6 +129,16 @@ struct SwiftCaptureCommand: AsyncParsableCommand {
     @Option(help: "Delete a saved preset")
     var deletePreset: String?
     
+    // MARK: - Audio Preset Management
+    @Option(name: [.customLong("save-audio-preset")], help: "Save current audio settings as a named audio preset")
+    var saveAudioPreset: String?
+    
+    @Flag(name: [.customLong("list-audio-presets")], help: "List all available audio presets (built-in and custom)")
+    var listAudioPresets: Bool = false
+    
+    @Option(name: [.customLong("delete-audio-preset")], help: "Delete a custom audio preset")
+    var deleteAudioPreset: String?
+    
     // MARK: - Output Format Options
     @Flag(help: "Output list results in JSON format for programmatic use")
     var json: Bool = false
@@ -111,6 +158,7 @@ struct SwiftCaptureCommand: AsyncParsableCommand {
         try validateFPS()
         try validateQuality()
         try validateAudioQuality()
+        try validateAudioEnhancement()
         try validateScreen()
         try validateCountdown()
         try validateArea()
@@ -143,6 +191,60 @@ struct SwiftCaptureCommand: AsyncParsableCommand {
     private func validateAudioQuality() throws {
         if !["low", "medium", "high"].contains(audioQuality.lowercased()) {
             throw ValidationError.invalidQuality(audioQuality)
+        }
+    }
+    
+    private func validateAudioEnhancement() throws {
+        // Validate audio gain range
+        if let gain = audioGain {
+            if gain < -20.0 || gain > 20.0 {
+                throw ValidationError(
+                    "Audio gain out of range: \(gain) dB. Must be between -20.0 and +20.0 dB.",
+                    suggestion: "Use a gain value like --audio-gain 6.0 or --audio-gain -3.0"
+                )
+            }
+        }
+        
+        // Validate audio preset
+        let validPresets = ["speech", "music", "gaming", "balanced", "custom"]
+        if !validPresets.contains(audioPreset.lowercased()) {
+            throw ValidationError(
+                "Invalid audio preset: '\(audioPreset)'. Valid presets: \(validPresets.joined(separator: ", "))",
+                suggestion: "Use --audio-preset speech, --audio-preset music, --audio-preset gaming, or --audio-preset balanced"
+            )
+        }
+        
+        // Validate compression ratio
+        if let ratio = compressionRatio {
+            if ratio < 1.0 || ratio > 20.0 {
+                throw ValidationError(
+                    "Compression ratio out of range: \(ratio). Must be between 1.0 and 20.0.",
+                    suggestion: "Use a compression ratio like --compression-ratio 3.0 or --compression-ratio 2.5"
+                )
+            }
+        }
+        
+        // Validate limiter threshold
+        if let threshold = limiterThreshold {
+            if threshold < -10.0 || threshold > 0.0 {
+                throw ValidationError(
+                    "Limiter threshold out of range: \(threshold) dBFS. Must be between -10.0 and 0.0 dBFS.",
+                    suggestion: "Use a threshold like --limiter-threshold -1.0 or --limiter-threshold -2.0"
+                )
+            }
+        }
+        
+        // Check if enhancement options are used without --audio-enhancement flag
+        let hasEnhancementOptions = audioGain != nil || autoGain || audioPreset != "balanced" || 
+                                   compressionRatio != nil || limiterThreshold != nil || 
+                                   qualityProtection || losslessMode || qualityComparison ||
+                                   audioMonitor || audioSpectrum || audioPreview
+        
+        if hasEnhancementOptions && !audioEnhancement {
+            throw ValidationError(
+                "Audio enhancement options require --audio-enhancement flag to be enabled.",
+                suggestion: "Add --audio-enhancement to enable audio processing features"
+            )
         }
     }
     
@@ -230,11 +332,11 @@ struct SwiftCaptureCommand: AsyncParsableCommand {
         }
         
         // Check for conflicting list operations
-        let listOperations = [screenList, appList, listPresets].filter { $0 }
+        let listOperations = [screenList, appList, listPresets, listAudioPresets].filter { $0 }
         if listOperations.count > 1 {
             throw ValidationError(
                 "Multiple list operations specified. Only one list operation allowed at a time.",
-                suggestion: "Use only one of: --screen-list, --app-list, or --list-presets"
+                suggestion: "Use only one of: --screen-list, --app-list, --list-presets, or --list-audio-presets"
             )
         }
         
@@ -247,12 +349,26 @@ struct SwiftCaptureCommand: AsyncParsableCommand {
             )
         }
         
+        // Check for conflicting audio preset operations
+        let audioPresetOperations = [saveAudioPreset != nil, deleteAudioPreset != nil].filter { $0 }
+        if audioPresetOperations.count > 1 {
+            throw ValidationError(
+                "Multiple audio preset operations specified. Only one audio preset operation allowed at a time.",
+                suggestion: "Use only one of: --save-audio-preset or --delete-audio-preset"
+            )
+        }
+        
         // Check if recording options are used with list operations
-        if screenList || appList || listPresets {
+        if screenList || appList || listPresets || listAudioPresets {
             let hasRecordingOptions = duration != nil || output != nil || area != nil || 
                                     screen != 1 || app != nil || enableMicrophone || 
                                     fps != 30 || quality != "medium" || 
-                                    audioQuality != "medium" || showCursor || countdown != 0 || force
+                                    audioQuality != "medium" || showCursor || countdown != 0 || force ||
+                                    audioEnhancement || audioGain != nil || autoGain ||
+                                    losslessMode || qualityComparison || 
+                                    audioPreset != "balanced" || compressionRatio != nil || 
+                                    limiterThreshold != nil || qualityProtection || audioMonitor || 
+                                    audioSpectrum || audioPreview
             
             if hasRecordingOptions {
                 throw ValidationError(
@@ -263,24 +379,29 @@ struct SwiftCaptureCommand: AsyncParsableCommand {
         }
         
         // Check if --json is used without list operations
-        if json && !screenList && !appList && !listPresets {
+        if json && !screenList && !appList && !listPresets && !listAudioPresets {
             throw ValidationError(
                 "The --json flag can only be used with list operations.",
-                suggestion: "Use --json with --screen-list, --app-list, or --list-presets"
+                suggestion: "Use --json with --screen-list, --app-list, --list-presets, or --list-audio-presets"
             )
         }
         
         // Check if preset deletion is used with other options
-        if deletePreset != nil {
+        if deletePreset != nil || deleteAudioPreset != nil {
             let hasOtherOptions = duration != nil || output != nil || area != nil || 
                                 screen != 1 || app != nil || enableMicrophone || 
                                 fps != 30 || quality != "medium" || 
-                                audioQuality != "medium" || showCursor || countdown != 0 || force || savePreset != nil || preset != nil
+                                audioQuality != "medium" || showCursor || countdown != 0 || force || 
+                                savePreset != nil || preset != nil || saveAudioPreset != nil ||
+                                audioEnhancement || audioGain != nil || autoGain || 
+                                audioPreset != "balanced" || compressionRatio != nil || 
+                                limiterThreshold != nil || qualityProtection || audioMonitor || 
+                                audioSpectrum || audioPreview
             
             if hasOtherOptions {
                 throw ValidationError(
                     "Preset deletion cannot be combined with other options.",
-                    suggestion: "Use --delete-preset alone to remove a preset"
+                    suggestion: "Use --delete-preset or --delete-audio-preset alone to remove a preset"
                 )
             }
         }
@@ -304,6 +425,12 @@ struct SwiftCaptureCommand: AsyncParsableCommand {
             try validatePresetName(presetName)
         }
         if let presetName = deletePreset {
+            try validatePresetName(presetName)
+        }
+        if let presetName = saveAudioPreset {
+            try validatePresetName(presetName)
+        }
+        if let presetName = deleteAudioPreset {
             try validatePresetName(presetName)
         }
         
@@ -393,15 +520,30 @@ struct SwiftCaptureCommand: AsyncParsableCommand {
                 return
             }
             
+            if listAudioPresets {
+                try await handleListAudioPresets()
+                return
+            }
+            
             // Handle preset deletion
             if let presetName = deletePreset {
                 try await handleDeletePreset(presetName)
                 return
             }
             
+            if let presetName = deleteAudioPreset {
+                try await handleDeleteAudioPreset(presetName)
+                return
+            }
+            
             // Handle preset saving (save current settings and exit)
             if let presetName = savePreset {
                 try await handleSavePreset(presetName)
+                return
+            }
+            
+            if let presetName = saveAudioPreset {
+                try await handleSaveAudioPreset(presetName)
                 return
             }
             
@@ -645,6 +787,11 @@ struct SwiftCaptureCommand: AsyncParsableCommand {
                 print("════════════════════════════════════════════════════════════════")
             }
             
+            // Show audio enhancement status if enabled
+            if audioEnhancement {
+                showAudioEnhancementStatus(configuration)
+            }
+            
             // Use the new modular ScreenRecorder
             let recorder = ScreenRecorder()
             
@@ -656,6 +803,11 @@ struct SwiftCaptureCommand: AsyncParsableCommand {
             
         } catch {
             print("❌ Recording error: \(error.localizedDescription)")
+            
+            // Log detailed error information if verbose mode is enabled
+            if verbose {
+                logDetailedError(error)
+            }
             
             // Re-throw the error for proper error handling
             throw error
@@ -716,6 +868,279 @@ struct SwiftCaptureCommand: AsyncParsableCommand {
         let filename = "\(timestamp).\(detectedFormat.fileExtension)"
         
         return FileManager.default.currentDirectoryPath + "/" + filename
+    }
+    
+    // MARK: - Audio Preset Handler Methods
+    
+    private func handleListAudioPresets() async throws {
+        do {
+            let configManager = try ConfigurationManager()
+            try configManager.listAudioPresets(jsonOutput: json)
+        } catch {
+            if json {
+                // For JSON output, print error as JSON
+                let errorOutput = ["error": error.localizedDescription]
+                if let jsonData = try? JSONSerialization.data(withJSONObject: errorOutput, options: .prettyPrinted),
+                   let jsonString = String(data: jsonData, encoding: .utf8) {
+                    print(jsonString)
+                }
+            } else {
+                print("❌ Error listing audio presets: \(error.localizedDescription)")
+            }
+        }
+        
+        // Show usage examples after listing presets (only for non-JSON output)
+        if !json {
+            print("")
+            print("USAGE:")
+            print("  scap --audio-preset speech             # Use built-in speech preset")
+            print("  scap --audio-preset my-custom         # Use custom preset")
+            print("  scap --save-audio-preset my-config    # Save current audio settings")
+            print("  scap --delete-audio-preset old-config # Delete custom preset")
+        }
+    }
+    
+    private func handleSaveAudioPreset(_ name: String) async throws {
+        print("💾 Saving audio preset '\(name)'...")
+        print("════════════════════════════════════════════════════════════════")
+        
+        do {
+            let configManager = try ConfigurationManager()
+            let configuration = try configManager.createConfiguration(from: self)
+            let audioSettings = configuration.audioSettings.enhancementSettings
+            
+            try configManager.saveAudioPreset(named: name, settings: audioSettings)
+            
+            print("")
+            print("🎵 Audio preset '\(name)' saved with the following settings:")
+            print("   Master Gain: \(audioSettings.masterGain) dB")
+            print("   Auto Gain: \(audioSettings.autoGainEnabled ? "enabled" : "disabled")")
+            print("   Target LUFS: \(audioSettings.targetLUFS)")
+            print("   Compression Ratio: \(audioSettings.compressionRatio):1")
+            print("   Threshold: \(audioSettings.threshold) dBFS")
+            print("   Attack: \(audioSettings.attack) ms")
+            print("   Release: \(audioSettings.release) ms")
+            print("   Limiter Threshold: \(audioSettings.limiterThreshold) dBFS")
+            print("   Quality Protection: \(audioSettings.qualityProtectionEnabled ? "enabled" : "disabled")")
+            print("   Processing: \(audioSettings.processingEnabled ? "enabled" : "disabled")")
+            print("")
+            print("💡 Use --audio-preset '\(name)' to load these settings in future recordings")
+            
+        } catch {
+            print("❌ Error saving audio preset: \(error.localizedDescription)")
+        }
+    }
+    
+    private func handleDeleteAudioPreset(_ name: String) async throws {
+        print("🗑️  Deleting audio preset '\(name)'...")
+        print("════════════════════════════════════════════════════════════════")
+        
+        do {
+            let configManager = try ConfigurationManager()
+            try configManager.deleteAudioPreset(named: name)
+        } catch {
+            print("❌ Error deleting audio preset: \(error.localizedDescription)")
+            if error.localizedDescription.contains("not found") {
+                print("")
+                print("💡 Use --list-audio-presets to see available custom presets")
+            }
+        }
+    }
+    
+    // MARK: - Audio Enhancement Status Display
+    
+    /// Show detailed audio enhancement status and configuration
+    /// - Parameter configuration: Recording configuration
+    private func showAudioEnhancementStatus(_ configuration: RecordingConfiguration) {
+        let audioSettings = configuration.audioSettings
+        let enhancementSettings = audioSettings.enhancementSettings
+        
+        print("🎵 Audio Enhancement Configuration")
+        print("════════════════════════════════════════════════════════════════")
+        
+        // Basic settings
+        print("   Processing: \(enhancementSettings.processingEnabled ? "✅ Enabled" : "❌ Disabled")")
+        print("   Preset: \(enhancementSettings.preset.rawValue.uppercased())")
+        print("   Master Gain: \(String(format: "%.1f", enhancementSettings.masterGain)) dB")
+        
+        // Auto gain control
+        if enhancementSettings.autoGainEnabled {
+            print("   Auto Gain: ✅ Enabled (Target: \(String(format: "%.1f", enhancementSettings.targetLUFS)) LUFS)")
+        } else {
+            print("   Auto Gain: ❌ Disabled")
+        }
+        
+        // Compression settings
+        if enhancementSettings.processingEnabled {
+            print("   Compression: \(String(format: "%.1f", enhancementSettings.compressionRatio)):1 @ \(String(format: "%.1f", enhancementSettings.threshold)) dBFS")
+            print("   Attack/Release: \(String(format: "%.1f", enhancementSettings.attack))ms / \(String(format: "%.1f", enhancementSettings.release))ms")
+            print("   Limiter: \(String(format: "%.1f", enhancementSettings.limiterThreshold)) dBFS (\(String(format: "%.1f", enhancementSettings.limiterRelease))ms release)")
+        }
+        
+        // Quality protection
+        if enhancementSettings.qualityProtectionEnabled {
+            print("   Quality Protection: ✅ Enabled (Max THD: \(String(format: "%.3f", enhancementSettings.maxTHD * 100))%)")
+        } else {
+            print("   Quality Protection: ❌ Disabled")
+        }
+        
+        // Monitoring options
+        var monitoringFeatures: [String] = []
+        if audioMonitor {
+            monitoringFeatures.append("Level Monitoring")
+        }
+        if audioSpectrum {
+            monitoringFeatures.append("Spectrum Analysis")
+        }
+        if audioPreview {
+            monitoringFeatures.append("Real-time Preview")
+        }
+        if qualityComparison {
+            monitoringFeatures.append("Quality Comparison")
+        }
+        
+        if !monitoringFeatures.isEmpty {
+            print("   Monitoring: \(monitoringFeatures.joined(separator: ", "))")
+        }
+        
+        // Advanced features
+        var advancedFeatures: [String] = []
+        if losslessMode {
+            advancedFeatures.append("Lossless Mode")
+        }
+        if qualityProtection {
+            advancedFeatures.append("Quality Protection")
+        }
+        
+        if !advancedFeatures.isEmpty {
+            print("   Advanced: \(advancedFeatures.joined(separator: ", "))")
+        }
+        
+        print("════════════════════════════════════════════════════════════════")
+        print("")
+        
+        // Show warnings if any
+        showAudioEnhancementWarnings(enhancementSettings)
+    }
+    
+    /// Show warnings for audio enhancement configuration
+    /// - Parameter settings: Audio enhancement settings
+    private func showAudioEnhancementWarnings(_ settings: AudioEnhancementSettings) {
+        var warnings: [String] = []
+        
+        // Check for potentially problematic settings
+        if settings.masterGain > 12.0 {
+            warnings.append("High master gain (\(String(format: "%.1f", settings.masterGain)) dB) may cause distortion")
+        }
+        
+        if settings.compressionRatio > 10.0 {
+            warnings.append("Very high compression ratio (\(String(format: "%.1f", settings.compressionRatio)):1) may affect audio quality")
+        }
+        
+        if settings.limiterThreshold > -0.5 {
+            warnings.append("Limiter threshold very high (\(String(format: "%.1f", settings.limiterThreshold)) dBFS) - clipping may occur")
+        }
+        
+        if !settings.qualityProtectionEnabled && settings.processingEnabled {
+            warnings.append("Quality protection disabled - audio quality may degrade")
+        }
+        
+        if settings.attack < 1.0 {
+            warnings.append("Very fast attack time (\(String(format: "%.1f", settings.attack))ms) may cause pumping artifacts")
+        }
+        
+        if settings.release > 1000.0 {
+            warnings.append("Very slow release time (\(String(format: "%.1f", settings.release))ms) may cause breathing artifacts")
+        }
+        
+        // Display warnings if any
+        if !warnings.isEmpty {
+            print("⚠️ Audio Enhancement Warnings:")
+            for warning in warnings {
+                print("   • \(warning)")
+            }
+            print("")
+        }
+    }
+    
+    // MARK: - Detailed Error Logging
+    
+    /// Log detailed error information for debugging
+    /// - Parameter error: Error to log
+    private func logDetailedError(_ error: Error) {
+        print("\n🔍 Detailed Error Information:")
+        print("════════════════════════════════════════════════════════════════")
+        
+        // Basic error information
+        print("   Error Type: \(type(of: error))")
+        print("   Description: \(error.localizedDescription)")
+        
+        // Additional error details based on type
+        if let nsError = error as NSError? {
+            print("   Domain: \(nsError.domain)")
+            print("   Code: \(nsError.code)")
+            
+            if !nsError.userInfo.isEmpty {
+                print("   User Info:")
+                for (key, value) in nsError.userInfo {
+                    print("     \(key): \(value)")
+                }
+            }
+        }
+        
+        // System information
+        print("   System: macOS \(ProcessInfo.processInfo.operatingSystemVersionString)")
+        print("   Timestamp: \(ISO8601DateFormatter().string(from: Date()))")
+        
+        // Current configuration summary
+        print("   Configuration Summary:")
+        print("     Audio Enhancement: \(audioEnhancement ? "enabled" : "disabled")")
+        if let gain = audioGain {
+            print("     Audio Gain: \(gain) dB")
+        }
+        print("     Audio Preset: \(audioPreset)")
+        print("     Quality Monitoring: \(audioMonitor || audioSpectrum ? "enabled" : "disabled")")
+        
+        print("════════════════════════════════════════════════════════════════")
+        print("")
+        
+        // Suggest troubleshooting steps
+        suggestTroubleshootingSteps(for: error)
+    }
+    
+    /// Suggest troubleshooting steps based on error type
+    /// - Parameter error: Error that occurred
+    private func suggestTroubleshootingSteps(for error: Error) {
+        print("💡 Troubleshooting Suggestions:")
+        
+        let errorDescription = error.localizedDescription.lowercased()
+        
+        if errorDescription.contains("permission") || errorDescription.contains("authorization") {
+            print("   • Check screen recording permissions in System Preferences > Security & Privacy")
+            print("   • Restart the application after granting permissions")
+        } else if errorDescription.contains("audio") {
+            print("   • Check microphone permissions if using --enable-microphone")
+            print("   • Try disabling audio enhancement with --audio-enhancement=false")
+            print("   • Reduce audio gain or use a more conservative preset")
+        } else if errorDescription.contains("memory") || errorDescription.contains("allocation") {
+            print("   • Close other applications to free up memory")
+            print("   • Use lower quality settings (--quality low)")
+            print("   • Reduce frame rate (--fps 15)")
+        } else if errorDescription.contains("disk") || errorDescription.contains("space") {
+            print("   • Check available disk space")
+            print("   • Choose a different output location")
+            print("   • Use lower quality settings to reduce file size")
+        } else if errorDescription.contains("display") || errorDescription.contains("screen") {
+            print("   • Verify the specified screen index with --screen-list")
+            print("   • Check if the recording area is valid with current screen resolution")
+        } else {
+            print("   • Try running with --verbose for more detailed output")
+            print("   • Check system requirements (macOS 12.3+)")
+            print("   • Restart the application and try again")
+        }
+        
+        print("   • Use --help for detailed usage information")
+        print("")
     }
 
 }

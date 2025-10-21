@@ -101,7 +101,8 @@ final class ConfigurationManagerTests: XCTestCase {
             targetApplication: nil,
             audioSettings: .default(),
             videoSettings: .default(resolution: CGSize(width: 1920, height: 1080)),
-            countdown: 0
+            countdown: 0,
+            verbose: false
         )
         
         XCTAssertThrowsError(try configManager.validateConfiguration(config)) { error in
@@ -162,7 +163,8 @@ final class ConfigurationManagerTests: XCTestCase {
             targetApplication: nil,
             audioSettings: .default(),
             videoSettings: .default(resolution: CGSize(width: 1920, height: 1080)),
-            countdown: 0
+            countdown: 0,
+            verbose: false
         )
     }
 }

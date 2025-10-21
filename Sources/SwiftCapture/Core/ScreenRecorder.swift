@@ -60,10 +60,21 @@ class ScreenRecorder {
         // Setup output components
         let (writer, videoInput, audioInput, adaptor) = try outputManager.setupRecording(for: finalConfig)
         
-        // Create progress indicator but don't start it yet
+        // Create audio status display if audio enhancement is enabled
+        var audioStatusDisplay: AudioStatusDisplay?
+        if finalConfig.audioSettings.enhancementSettings.processingEnabled || 
+           finalConfig.audioSettings.qualityMonitoringEnabled {
+            audioStatusDisplay = AudioStatusDisplay.createBasicDisplay(
+                settings: finalConfig.audioSettings.enhancementSettings,
+                verbose: finalConfig.verbose
+            )
+        }
+        
+        // Create progress indicator with audio status integration
         let progressIndicator = ProgressIndicator(
             outputURL: finalConfig.outputURL,
-            expectedDuration: finalConfig.duration
+            expectedDuration: finalConfig.duration,
+            audioStatusDisplay: audioStatusDisplay
         )
         
         // Setup graceful shutdown handling
@@ -84,8 +95,25 @@ class ScreenRecorder {
                 writer: writer,
                 videoInput: videoInput,
                 audioInput: audioInput,
-                adaptor: adaptor
+                adaptor: adaptor,
+                audioStatusDisplay: audioStatusDisplay
             )
+            
+            // Start audio status display if enabled
+            if let audioStatusDisplay = audioStatusDisplay {
+                audioStatusDisplay.startStatusDisplay()
+                if finalConfig.verbose {
+                    print("📊 Audio status monitoring started")
+                }
+            }
+            
+            // Start real-time audio monitoring if enabled
+            if finalConfig.audioSettings.qualityMonitoringEnabled {
+                captureController.startMonitoringDisplay()
+                if finalConfig.verbose {
+                    print("📊 Real-time audio monitoring started")
+                }
+            }
             
             // Start progress indicator after capture is actually started
             progressIndicator.startProgress()
@@ -105,6 +133,12 @@ class ScreenRecorder {
                             isRecordingComplete = true
                             
                             print("🛑 Stopping continuous recording and finalizing file...")
+                            
+                            // Stop audio status display first
+                            audioStatusDisplay?.stopStatusDisplay()
+                            
+                            // Stop real-time monitoring first
+                            self.captureController.stopMonitoringDisplay()
                             
                             // Stop the capture stream
                             if let stream = captureStream {
@@ -134,6 +168,8 @@ class ScreenRecorder {
                                             writer: writer,
                                             videoInput: videoInput,
                                             audioInput: audioInput,
+                                            config: finalConfig,
+                                            qualityMonitor: self.captureController.qualityMonitor,
                                             verbose: finalConfig.verbose
                                         )
                                         return .success(())
@@ -369,6 +405,12 @@ class ScreenRecorder {
             
             print("🛑 Stopping capture stream...")
             
+            // Stop audio status display first
+            audioStatusDisplay?.stopStatusDisplay()
+            
+            // Stop real-time monitoring first
+            captureController.stopMonitoringDisplay()
+            
             // Stop the capture stream first
             try await captureController.stopCapture(captureStream!)
             
@@ -393,6 +435,8 @@ class ScreenRecorder {
                             writer: writer,
                             videoInput: videoInput,
                             audioInput: audioInput,
+                            config: finalConfig,
+                            qualityMonitor: self.captureController.qualityMonitor,
                             verbose: finalConfig.verbose
                         )
                     }

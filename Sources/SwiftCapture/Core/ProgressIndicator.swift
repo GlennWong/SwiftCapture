@@ -12,10 +12,24 @@ class ProgressIndicator: @unchecked Sendable {
     private let outputURL: URL
     private let expectedDuration: TimeInterval
     
+    // Audio status integration
+    private var audioStatusDisplay: AudioStatusDisplay?
+    private var showAudioStatus: Bool = false
+    private var lastAudioStatus: String = ""
+    
     // MARK: - Initialization
-    init(outputURL: URL, expectedDuration: TimeInterval) {
+    init(outputURL: URL, expectedDuration: TimeInterval, audioStatusDisplay: AudioStatusDisplay? = nil) {
         self.outputURL = outputURL
         self.expectedDuration = expectedDuration
+        self.audioStatusDisplay = audioStatusDisplay
+        self.showAudioStatus = audioStatusDisplay != nil
+        
+        // Setup audio status callback if available
+        if let audioDisplay = audioStatusDisplay {
+            audioDisplay.addStatusUpdateCallback { [weak self] status in
+                self?.lastAudioStatus = status
+            }
+        }
     }
     
     // MARK: - Public Methods
@@ -161,6 +175,15 @@ class ProgressIndicator: @unchecked Sendable {
         DispatchQueue.main.sync {
             self.clearCurrentLine()
             print(progressLine, terminator: "")
+            
+            // Show audio status if available and enabled
+            if showAudioStatus && !lastAudioStatus.isEmpty {
+                print("")
+                print(lastAudioStatus, terminator: "")
+                // Move cursor back up to overwrite on next update
+                print("\r\u{001B}[1A", terminator: "")
+            }
+            
             fflush(stdout)
         }
     }

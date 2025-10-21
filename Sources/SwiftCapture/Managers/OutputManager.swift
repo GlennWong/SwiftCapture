@@ -2,6 +2,60 @@ import Foundation
 @preconcurrency import AVFoundation
 import CoreGraphics
 
+/// Audio quality validation status
+enum AudioQualityStatus {
+    case excellent  // Quality score >= 0.9
+    case good      // Quality score >= 0.7
+    case acceptable // Quality score >= 0.5
+    case poor      // Quality score < 0.5
+    
+    var description: String {
+        switch self {
+        case .excellent: return "Excellent"
+        case .good: return "Good"
+        case .acceptable: return "Acceptable"
+        case .poor: return "Poor"
+        }
+    }
+    
+    var emoji: String {
+        switch self {
+        case .excellent: return "🟢"
+        case .good: return "🟡"
+        case .acceptable: return "🟠"
+        case .poor: return "🔴"
+        }
+    }
+}
+
+/// Audio quality validation result
+struct AudioQualityValidationResult {
+    /// Overall quality status
+    let status: AudioQualityStatus
+    
+    /// Quality score (0.0 to 1.0)
+    let qualityScore: Float
+    
+    /// List of identified quality issues
+    let issues: [String]
+    
+    /// Current audio metrics (if available)
+    let metrics: AudioMetrics?
+    
+    /// Recommendations for improving quality
+    let recommendations: [String]
+    
+    /// Whether the audio quality is acceptable for recording
+    var isAcceptable: Bool {
+        return qualityScore >= 0.5
+    }
+    
+    /// Whether the audio quality is optimal
+    var isOptimal: Bool {
+        return qualityScore >= 0.9 && issues.isEmpty
+    }
+}
+
 /// Manages output file creation and AVAssetWriter configuration
 class OutputManager {
     
@@ -245,16 +299,163 @@ class OutputManager {
         return input
     }
     
-    /// Create audio input with quality settings
+    /// Create audio input with quality settings and enhancement support
     /// - Parameter config: Recording configuration
     /// - Returns: Configured AVAssetWriterInput for audio
     /// - Throws: OutputError if creation fails
     func createAudioInput(for config: RecordingConfiguration) throws -> AVAssetWriterInput {
-        let settings = config.audioSettings.avSettings
+        // Use enhanced settings if audio processing is enabled
+        let settings = getOptimizedAudioSettings(for: config)
         
         let input = AVAssetWriterInput(mediaType: .audio, outputSettings: settings)
         input.expectsMediaDataInRealTime = true
+        
+        // Configure performance expectations for high-quality audio
+        if config.audioSettings.hasEnhancement {
+            input.performsMultiPassEncodingIfSupported = true
+        }
+        
         return input
+    }
+    
+    /// Get optimized audio settings based on configuration and quality requirements
+    /// - Parameter config: Recording configuration
+    /// - Returns: Optimized audio settings dictionary
+    private func getOptimizedAudioSettings(for config: RecordingConfiguration) -> [String: Any] {
+        let audioSettings = config.audioSettings
+        
+        // Start with base settings
+        var settings = audioSettings.finalAVSettings
+        
+        // Apply quality-adaptive encoding based on enhancement settings
+        if audioSettings.hasEnhancement {
+            settings = applyQualityAdaptiveEncoding(settings, enhancementSettings: audioSettings.enhancementSettings)
+        }
+        
+        // Apply high-quality encoding optimizations
+        settings = applyHighQualityOptimizations(settings, audioSettings: audioSettings)
+        
+        return settings
+    }
+    
+    /// Apply quality-adaptive encoding settings based on enhancement configuration
+    /// - Parameters:
+    ///   - baseSettings: Base audio settings
+    ///   - enhancementSettings: Audio enhancement configuration
+    /// - Returns: Adapted audio settings
+    private func applyQualityAdaptiveEncoding(_ baseSettings: [String: Any], enhancementSettings: AudioEnhancementSettings) -> [String: Any] {
+        var settings = baseSettings
+        
+        // Determine optimal bit rate based on enhancement settings
+        let baseBitRate = baseSettings[AVEncoderBitRateKey] as? Int ?? 128_000
+        let adaptiveBitRate = calculateAdaptiveBitRate(baseBitRate: baseBitRate, enhancementSettings: enhancementSettings)
+        
+        settings[AVEncoderBitRateKey] = adaptiveBitRate
+        
+        // Set audio quality based on enhancement mode
+        if enhancementSettings.losslessModeEnabled {
+            // Use maximum quality for lossless mode
+            settings[AVEncoderAudioQualityKey] = AVAudioQuality.max.rawValue
+            // Note: Variable bit rate is handled through quality settings for AAC
+            
+            // Use higher sample rate if available
+            if let sampleRate = settings[AVSampleRateKey] as? Double, sampleRate < 48000 {
+                settings[AVSampleRateKey] = 48000.0
+            }
+        } else if enhancementSettings.qualityProtectionEnabled {
+            // Use high quality with variable bit rate for quality protection
+            settings[AVEncoderAudioQualityKey] = AVAudioQuality.high.rawValue
+            // Note: Variable bit rate is handled through quality settings for AAC
+        }
+        
+        // Adjust encoding complexity based on processing requirements
+        if enhancementSettings.compressionRatio > 3.0 || enhancementSettings.masterGain > 10.0 {
+            // Use higher quality encoding for heavily processed audio
+            settings[AVEncoderAudioQualityKey] = AVAudioQuality.max.rawValue
+        }
+        
+        return settings
+    }
+    
+    /// Calculate adaptive bit rate based on enhancement settings
+    /// - Parameters:
+    ///   - baseBitRate: Base bit rate from audio quality setting
+    ///   - enhancementSettings: Enhancement configuration
+    /// - Returns: Optimized bit rate
+    private func calculateAdaptiveBitRate(baseBitRate: Int, enhancementSettings: AudioEnhancementSettings) -> Int {
+        var adaptiveBitRate = baseBitRate
+        
+        // Increase bit rate for lossless mode
+        if enhancementSettings.losslessModeEnabled {
+            adaptiveBitRate = min(baseBitRate * 3, 512_000) // Up to 512 kbps for lossless
+        } else if enhancementSettings.processingEnabled {
+            // Increase bit rate based on processing intensity
+            let processingIntensity = calculateProcessingIntensity(enhancementSettings)
+            let multiplier = 1.0 + (processingIntensity * 0.8) // Up to 80% increase
+            adaptiveBitRate = min(Int(Float(baseBitRate) * multiplier), 320_000) // Max 320 kbps for processed
+        }
+        
+        // Ensure minimum quality for enhanced audio
+        if enhancementSettings.processingEnabled {
+            adaptiveBitRate = max(adaptiveBitRate, 192_000) // Minimum 192 kbps for enhanced audio
+        }
+        
+        return adaptiveBitRate
+    }
+    
+    /// Calculate processing intensity score from enhancement settings
+    /// - Parameter settings: Enhancement settings
+    /// - Returns: Processing intensity (0.0 to 1.0)
+    private func calculateProcessingIntensity(_ settings: AudioEnhancementSettings) -> Float {
+        var intensity: Float = 0.0
+        
+        // Factor in gain amount
+        intensity += min(abs(settings.masterGain) / 20.0, 1.0) * 0.3
+        
+        // Factor in compression ratio
+        intensity += min((settings.compressionRatio - 1.0) / 4.0, 1.0) * 0.4
+        
+        // Factor in limiter usage
+        if settings.limiterThreshold > -3.0 {
+            intensity += 0.2
+        }
+        
+        // Factor in quality protection overhead
+        if settings.qualityProtectionEnabled {
+            intensity += 0.1
+        }
+        
+        return min(intensity, 1.0)
+    }
+    
+    /// Apply high-quality encoding optimizations
+    /// - Parameters:
+    ///   - settings: Base audio settings
+    ///   - audioSettings: Audio configuration
+    /// - Returns: Optimized settings
+    private func applyHighQualityOptimizations(_ settings: [String: Any], audioSettings: AudioSettings) -> [String: Any] {
+        var optimizedSettings = settings
+        
+        // Enable high-quality AAC encoding
+        optimizedSettings[AVFormatIDKey] = kAudioFormatMPEG4AAC
+        
+        // Set optimal channel layout for stereo
+        if audioSettings.channels == 2 {
+            optimizedSettings[AVChannelLayoutKey] = [
+                AVChannelLayoutKey: kAudioChannelLayoutTag_Stereo
+            ]
+        }
+        
+        // Configure bit depth for high quality
+        if audioSettings.quality == .high || audioSettings.hasEnhancement {
+            // Use higher bit depth equivalent settings
+            optimizedSettings[AVLinearPCMBitDepthKey] = 24 // Request 24-bit equivalent quality
+        }
+        
+        // Enable advanced encoding features
+        optimizedSettings[AVEncoderAudioQualityForVBRKey] = AVAudioQuality.max.rawValue
+        
+        return optimizedSettings
     }
     
     /// Create pixel buffer adaptor for video input
@@ -327,7 +528,21 @@ class OutputManager {
             print("   Format: \(config.outputFormat.rawValue.uppercased())")
             print("   Video Settings: \(config.videoSettings.fps)fps, \(config.videoSettings.quality.rawValue) quality")
             if audioInput != nil {
-                print("   Audio Settings: \(config.audioSettings.quality.rawValue) quality, \(config.audioSettings.sampleRate) Hz")
+                let audioSettings = config.audioSettings
+                print("   Audio Settings: \(audioSettings.quality.rawValue) quality, \(audioSettings.sampleRate) Hz")
+                
+                // Show enhanced audio information
+                if audioSettings.hasEnhancement {
+                    let finalSettings = getOptimizedAudioSettings(for: config)
+                    let bitRate = finalSettings[AVEncoderBitRateKey] as? Int ?? 0
+                    print("   Audio Enhancement: enabled (\(audioSettings.enhancementSettings.preset.rawValue) preset)")
+                    print("   Enhanced Bit Rate: \(bitRate/1000) kbps")
+                    print("   Quality Protection: \(audioSettings.enhancementSettings.qualityProtectionEnabled ? "enabled" : "disabled")")
+                    
+                    if audioSettings.enhancementSettings.losslessModeEnabled {
+                        print("   Lossless Mode: enabled")
+                    }
+                }
             } else {
                 print("   Audio: disabled")
             }
@@ -336,14 +551,228 @@ class OutputManager {
         return (writer: writer, videoInput: videoInput, audioInput: audioInput, adaptor: adaptor)
     }
     
-    /// Finalize recording and wait for completion
+    /// Validate audio quality after processing
+    /// - Parameters:
+    ///   - config: Recording configuration
+    ///   - qualityMonitor: Audio quality monitor (optional)
+    /// - Returns: Audio quality validation result
+    func validateAudioQuality(for config: RecordingConfiguration, qualityMonitor: AudioQualityMonitor? = nil) -> AudioQualityValidationResult {
+        let audioSettings = config.audioSettings
+        
+        // Perform basic configuration validation
+        var validationIssues: [String] = []
+        var qualityScore: Float = 1.0
+        
+        // Check if bit rate is sufficient for enhancement
+        if audioSettings.hasEnhancement {
+            let finalSettings = getOptimizedAudioSettings(for: config)
+            let bitRate = finalSettings[AVEncoderBitRateKey] as? Int ?? 0
+            
+            if bitRate < 192_000 {
+                validationIssues.append("Bit rate (\(bitRate/1000) kbps) may be insufficient for audio enhancement")
+                qualityScore -= 0.2
+            }
+            
+            // Validate enhancement settings
+            let enhancementValidation = validateEnhancementSettings(audioSettings.enhancementSettings)
+            validationIssues.append(contentsOf: enhancementValidation.issues)
+            qualityScore *= enhancementValidation.score
+        }
+        
+        // Check sample rate compatibility
+        if audioSettings.sampleRate < 44100 && audioSettings.hasEnhancement {
+            validationIssues.append("Sample rate (\(Int(audioSettings.sampleRate)) Hz) may be too low for optimal enhancement")
+            qualityScore -= 0.1
+        }
+        
+        // Get quality metrics from monitor if available
+        var currentMetrics: AudioMetrics?
+        if let monitor = qualityMonitor {
+            currentMetrics = monitor.getCurrentMetrics()
+            
+            // Check for quality issues
+            if let metrics = currentMetrics {
+                if metrics.clippingDetected {
+                    validationIssues.append("Audio clipping detected")
+                    qualityScore -= 0.3
+                }
+                
+                if metrics.thd > audioSettings.enhancementSettings.maxTHD {
+                    validationIssues.append("THD (\(String(format: "%.3f", metrics.thd * 100))%) exceeds maximum allowed")
+                    qualityScore -= 0.2
+                }
+                
+                if metrics.peakLevel > -1.0 {
+                    validationIssues.append("Peak level (\(String(format: "%.1f", metrics.peakLevel)) dBFS) is too high")
+                    qualityScore -= 0.1
+                }
+            }
+        }
+        
+        // Determine overall quality status
+        let qualityStatus: AudioQualityStatus
+        if qualityScore >= 0.9 {
+            qualityStatus = .excellent
+        } else if qualityScore >= 0.7 {
+            qualityStatus = .good
+        } else if qualityScore >= 0.5 {
+            qualityStatus = .acceptable
+        } else {
+            qualityStatus = .poor
+        }
+        
+        return AudioQualityValidationResult(
+            status: qualityStatus,
+            qualityScore: qualityScore,
+            issues: validationIssues,
+            metrics: currentMetrics,
+            recommendations: generateQualityRecommendations(issues: validationIssues, score: qualityScore, config: config)
+        )
+    }
+    
+    /// Validate enhancement settings for quality and compatibility
+    /// - Parameter settings: Enhancement settings to validate
+    /// - Returns: Validation result with issues and score
+    private func validateEnhancementSettings(_ settings: AudioEnhancementSettings) -> (issues: [String], score: Float) {
+        var issues: [String] = []
+        var score: Float = 1.0
+        
+        // Check if settings are valid
+        if !settings.isValid {
+            issues.append(contentsOf: settings.validationErrors)
+            score *= 0.5
+        }
+        
+        // Check for potentially problematic settings
+        if settings.masterGain > 15.0 {
+            issues.append("Very high gain (\(String(format: "%.1f", settings.masterGain)) dB) may cause distortion")
+            score -= 0.2
+        }
+        
+        if settings.compressionRatio > 5.0 {
+            issues.append("High compression ratio (\(String(format: "%.1f", settings.compressionRatio)):1) may reduce audio quality")
+            score -= 0.1
+        }
+        
+        if settings.limiterThreshold > -0.5 {
+            issues.append("Limiter threshold (\(String(format: "%.1f", settings.limiterThreshold)) dBFS) is very aggressive")
+            score -= 0.1
+        }
+        
+        // Check for quality protection conflicts
+        if !settings.qualityProtectionEnabled && (settings.masterGain > 10.0 || settings.compressionRatio > 4.0) {
+            issues.append("Quality protection is disabled with aggressive processing settings")
+            score -= 0.15
+        }
+        
+        return (issues: issues, score: max(0.0, score))
+    }
+    
+    /// Generate quality improvement recommendations
+    /// - Parameters:
+    ///   - issues: Identified quality issues
+    ///   - score: Current quality score
+    ///   - config: Recording configuration
+    /// - Returns: Array of recommendations
+    private func generateQualityRecommendations(issues: [String], score: Float, config: RecordingConfiguration) -> [String] {
+        var recommendations: [String] = []
+        
+        if score < 0.7 {
+            recommendations.append("Consider using higher audio quality settings")
+        }
+        
+        if config.audioSettings.hasEnhancement {
+            let settings = config.audioSettings.enhancementSettings
+            
+            if settings.masterGain > 12.0 {
+                recommendations.append("Reduce master gain to avoid distortion")
+            }
+            
+            if settings.compressionRatio > 4.0 {
+                recommendations.append("Lower compression ratio for better audio quality")
+            }
+            
+            if !settings.qualityProtectionEnabled {
+                recommendations.append("Enable quality protection for safer processing")
+            }
+            
+            if !settings.losslessModeEnabled && score < 0.6 {
+                recommendations.append("Consider enabling lossless mode for critical audio")
+            }
+        }
+        
+        if config.audioSettings.sampleRate < 48000 && config.audioSettings.hasEnhancement {
+            recommendations.append("Use 48 kHz sample rate for optimal enhancement quality")
+        }
+        
+        if config.audioSettings.bitRate < 192_000 && config.audioSettings.hasEnhancement {
+            recommendations.append("Increase bit rate to at least 192 kbps for enhanced audio")
+        }
+        
+        return recommendations
+    }
+    
+    /// Finalize recording and wait for completion with quality validation
+    /// - Parameters:
+    ///   - writer: AVAssetWriter to finalize
+    ///   - videoInput: Video input to mark as finished
+    ///   - audioInput: Optional audio input to mark as finished
+    ///   - config: Recording configuration for quality validation
+    ///   - qualityMonitor: Optional quality monitor for final validation
+    ///   - verbose: Whether to show verbose output
+    /// - Throws: OutputError if finalization fails
+    func finalizeRecording(
+        writer: AVAssetWriter,
+        videoInput: AVAssetWriterInput,
+        audioInput: AVAssetWriterInput?,
+        config: RecordingConfiguration? = nil,
+        qualityMonitor: AudioQualityMonitor? = nil,
+        verbose: Bool = false
+    ) async throws {
+        // Perform quality validation before finalization if config is provided
+        if let config = config, audioInput != nil {
+            let qualityResult = validateAudioQuality(for: config, qualityMonitor: qualityMonitor)
+            
+            if verbose {
+                print("🎵 Audio Quality Validation:")
+                print("   Status: \(qualityResult.status.description)")
+                print("   Score: \(String(format: "%.2f", qualityResult.qualityScore))")
+                
+                if !qualityResult.issues.isEmpty {
+                    print("   Issues:")
+                    for issue in qualityResult.issues {
+                        print("     • \(issue)")
+                    }
+                }
+                
+                if !qualityResult.recommendations.isEmpty {
+                    print("   Recommendations:")
+                    for recommendation in qualityResult.recommendations {
+                        print("     • \(recommendation)")
+                    }
+                }
+            }
+            
+            // Log quality metrics if available
+            if let metrics = qualityResult.metrics, verbose {
+                print("   Peak: \(String(format: "%.1f", metrics.peakLevel)) dBFS")
+                print("   RMS: \(String(format: "%.1f", metrics.rmsLevel)) dBFS")
+                print("   THD: \(String(format: "%.3f", metrics.thd * 100))%")
+                print("   Clipping: \(metrics.clippingDetected ? "⚠️ Detected" : "✅ None")")
+            }
+        }
+        
+        try await finalizeRecordingInternal(writer: writer, videoInput: videoInput, audioInput: audioInput, verbose: verbose)
+    }
+    
+    /// Internal finalization method (original implementation)
     /// - Parameters:
     ///   - writer: AVAssetWriter to finalize
     ///   - videoInput: Video input to mark as finished
     ///   - audioInput: Optional audio input to mark as finished
     ///   - verbose: Whether to show verbose output
     /// - Throws: OutputError if finalization fails
-    func finalizeRecording(
+    private func finalizeRecordingInternal(
         writer: AVAssetWriter,
         videoInput: AVAssetWriterInput,
         audioInput: AVAssetWriterInput?,
@@ -408,6 +837,22 @@ class OutputManager {
         if verbose {
             print("💾 File finalization completed")
         }
+    }
+    
+    /// Finalize recording (backward compatibility method)
+    /// - Parameters:
+    ///   - writer: AVAssetWriter to finalize
+    ///   - videoInput: Video input to mark as finished
+    ///   - audioInput: Optional audio input to mark as finished
+    ///   - verbose: Whether to show verbose output
+    /// - Throws: OutputError if finalization fails
+    func finalizeRecording(
+        writer: AVAssetWriter,
+        videoInput: AVAssetWriterInput,
+        audioInput: AVAssetWriterInput?,
+        verbose: Bool = false
+    ) async throws {
+        try await finalizeRecordingInternal(writer: writer, videoInput: videoInput, audioInput: audioInput, verbose: verbose)
     }
     
     /// Get human-readable description of AVAssetWriter status

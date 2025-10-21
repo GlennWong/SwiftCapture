@@ -38,6 +38,9 @@ struct RecordingPreset: Codable {
     /// Audio quality
     let audioQuality: String
     
+    /// Audio enhancement settings (optional for backward compatibility)
+    let audioEnhancementSettings: AudioEnhancementSettings?
+    
     /// When the preset was created
     let createdAt: Date
     
@@ -77,6 +80,7 @@ struct RecordingPreset: Codable {
         self.showCursor = configuration.videoSettings.showCursor
         self.countdown = configuration.countdown
         self.audioQuality = configuration.audioSettings.quality.rawValue
+        self.audioEnhancementSettings = configuration.audioSettings.enhancementSettings
         self.createdAt = Date()
         self.lastUsed = nil
     }
@@ -114,7 +118,8 @@ struct RecordingPreset: Codable {
                                 suggestion: "Valid audio qualities are: low, medium, high")
         }
         
-        // Create audio settings
+        // Create audio settings with stored enhancement settings or defaults
+        let enhancementSettings = audioEnhancementSettings ?? AudioEnhancementSettings()
         let audioSettings = AudioSettings(
             includeMicrophone: enableMicrophone,
             includeSystemAudio: true, // Always include system audio
@@ -122,7 +127,10 @@ struct RecordingPreset: Codable {
             quality: audioQualityEnum,
             sampleRate: audioQualityEnum.sampleRate,
             bitRate: audioQualityEnum.bitRate,
-            channels: 2
+            channels: 2,
+            enhancementSettings: enhancementSettings,
+            qualityMonitoringEnabled: enhancementSettings.qualityMonitoringEnabled,
+            processingEnabled: enhancementSettings.processingEnabled
         )
         
         // Create video settings (resolution will be set based on actual screen/area)

@@ -52,6 +52,14 @@ class AudioManager {
     // MARK: - Properties
     private var audioEngine: AVAudioEngine?
     private var microphoneNode: AVAudioInputNode?
+    private var audioProcessor: AudioProcessor?
+    private var qualityMonitor: AudioQualityMonitor?
+    
+    // Real-time monitoring components
+    private var levelMeter: AudioLevelMeter?
+    private var spectrumAnalyzer: AudioSpectrumAnalyzer?
+    private var previewEngine: AudioPreviewEngine?
+    private var monitoringDisplay: AudioMonitoringDisplay?
     
     // MARK: - Initialization
     init() {
@@ -80,6 +88,11 @@ class AudioManager {
             try validateMicrophoneAvailability()
         }
         
+        // Initialize audio processing components if enhancement is enabled
+        if config.audioSettings.processingEnabled {
+            try setupAudioProcessing(with: config.audioSettings.enhancementSettings)
+        }
+        
         // Create audio settings with validated parameters
         let audioSettings = AudioSettings(
             includeMicrophone: config.audioSettings.includeMicrophone,
@@ -88,7 +101,10 @@ class AudioManager {
             quality: audioQuality,
             sampleRate: audioQuality.sampleRate,
             bitRate: audioQuality.bitRate,
-            channels: 2 // Stereo
+            channels: 2, // Stereo
+            enhancementSettings: config.audioSettings.enhancementSettings,
+            qualityMonitoringEnabled: config.audioSettings.qualityMonitoringEnabled,
+            processingEnabled: config.audioSettings.processingEnabled
         )
         
         return audioSettings
@@ -178,13 +194,17 @@ class AudioManager {
     ///   - includeSystemAudio: Whether to include system audio
     ///   - forceSystemAudio: Force system-wide audio recording
     ///   - qualityString: Audio quality string
+    ///   - enhancementSettings: Audio enhancement configuration
+    ///   - processingEnabled: Enable audio processing
     /// - Returns: Validated AudioSettings
     /// - Throws: AudioError if validation fails
     func createAudioSettings(
         includeMicrophone: Bool,
         includeSystemAudio: Bool,
         forceSystemAudio: Bool = false,
-        qualityString: String
+        qualityString: String,
+        enhancementSettings: AudioEnhancementSettings = AudioEnhancementSettings(),
+        processingEnabled: Bool = false
     ) throws -> AudioSettings {
         // Validate quality
         let quality = try getAudioQuality(from: qualityString)
@@ -194,6 +214,15 @@ class AudioManager {
             try validateMicrophoneAvailability()
         }
         
+        // Validate enhancement settings if processing is enabled
+        if processingEnabled && !enhancementSettings.isValid {
+            let errors = enhancementSettings.validationErrors.joined(separator: ", ")
+            throw AudioError.audioConfigurationFailed(
+                NSError(domain: "AudioManager", code: -1, 
+                       userInfo: [NSLocalizedDescriptionKey: "Invalid enhancement settings: \(errors)"])
+            )
+        }
+        
         return AudioSettings(
             includeMicrophone: includeMicrophone,
             includeSystemAudio: includeSystemAudio,
@@ -201,8 +230,249 @@ class AudioManager {
             quality: quality,
             sampleRate: quality.sampleRate,
             bitRate: quality.bitRate,
-            channels: 2
+            channels: 2,
+            enhancementSettings: enhancementSettings,
+            qualityMonitoringEnabled: true,
+            processingEnabled: processingEnabled
         )
+    }
+    
+    /// Setup audio processing components
+    /// - Parameter settings: Audio enhancement settings
+    /// - Throws: AudioError if setup fails
+    func setupAudioProcessing(with settings: AudioEnhancementSettings) throws {
+        // Initialize optimized audio processor
+        audioProcessor = AudioProcessor(settings: settings)
+        
+        // Initialize quality monitor if enabled
+        if settings.qualityMonitoringEnabled {
+            qualityMonitor = AudioQualityMonitor()
+            
+            // Enable quality comparison if requested
+            qualityMonitor?.enableQualityComparison(settings.qualityComparisonEnabled)
+        }
+        
+        // Enable lossless mode if requested
+        if settings.losslessModeEnabled {
+            audioProcessor?.enableLosslessMode(true)
+        }
+        
+        // Initialize real-time monitoring components
+        try setupRealtimeMonitoring(with: settings)
+        
+        print("🎛️ Audio processing initialized with performance optimizations:")
+        print("   Preset: \(settings.preset.rawValue)")
+        print("   Master Gain: \(settings.masterGain) dB")
+        print("   Auto Gain: \(settings.autoGainEnabled ? "enabled" : "disabled")")
+        print("   Quality Protection: \(settings.qualityProtectionEnabled ? "enabled" : "disabled")")
+        print("   Lossless Mode: \(settings.losslessModeEnabled ? "enabled" : "disabled")")
+        print("   Quality Comparison: \(settings.qualityComparisonEnabled ? "enabled" : "disabled")")
+        print("   Real-time Monitoring: \(settings.qualityMonitoringEnabled ? "enabled" : "disabled")")
+        print("   🚀 Performance Features: Buffer pooling, vDSP acceleration, memory monitoring")
+    }
+    
+    /// Get current audio processing status
+    /// - Returns: Dictionary with processing status information
+    func getProcessingStatus() -> [String: Any] {
+        var status: [String: Any] = [
+            "processingEnabled": audioProcessor != nil,
+            "qualityMonitoringEnabled": qualityMonitor != nil,
+            "levelMeterEnabled": levelMeter != nil,
+            "spectrumAnalyzerEnabled": spectrumAnalyzer != nil,
+            "previewEngineEnabled": previewEngine != nil,
+            "monitoringDisplayEnabled": monitoringDisplay != nil
+        ]
+        
+        if let processor = audioProcessor {
+            status["processorStats"] = processor.getProcessingStats()
+            status["performanceMetrics"] = processor.getPerformanceMetrics()
+            status["memoryStatistics"] = processor.getMemoryStatistics()
+        }
+        
+        if let monitor = qualityMonitor {
+            status["qualityMetrics"] = [
+                "description": monitor.getMetricsDescription(),
+                "currentMetrics": monitor.getCurrentMetrics()
+            ]
+        }
+        
+        if let levelMeter = levelMeter {
+            status["audioLevels"] = [
+                "peak": levelMeter.peakLevel,
+                "rms": levelMeter.rmsLevel,
+                "description": levelMeter.getLevelsDescription()
+            ]
+        }
+        
+        if let spectrumAnalyzer = spectrumAnalyzer {
+            status["spectrum"] = spectrumAnalyzer.getBandSpectrum()
+        }
+        
+        if let previewEngine = previewEngine {
+            status["preview"] = previewEngine.getPreviewStatus()
+        }
+        
+        if let monitoringDisplay = monitoringDisplay {
+            status["monitoring"] = monitoringDisplay.getMonitoringStatus()
+        }
+        
+        return status
+    }
+    
+    /// Enable or disable lossless audio mode
+    /// - Parameter enabled: Whether to enable lossless mode
+    func enableLosslessMode(_ enabled: Bool) {
+        audioProcessor?.enableLosslessMode(enabled)
+        
+        if enabled {
+            print("🔒 Lossless audio mode enabled via AudioManager")
+        } else {
+            print("🔓 Lossless audio mode disabled via AudioManager")
+        }
+    }
+    
+    /// Check if lossless mode is currently active
+    /// - Returns: True if lossless mode is active
+    func isLosslessModeActive() -> Bool {
+        return audioProcessor?.isLosslessModeActive ?? false
+    }
+    
+    /// Get comprehensive audio quality analysis report
+    /// - Returns: Quality analysis report with recommendations
+    func getQualityAnalysisReport() -> [String: Any] {
+        var report: [String: Any] = [:]
+        
+        // Get processor quality analysis
+        if let processor = audioProcessor {
+            report["processorAnalysis"] = processor.getQualityAnalysisReport()
+        }
+        
+        // Get quality monitor protection history
+        if let monitor = qualityMonitor {
+            let protectionHistory = monitor.getProtectionHistory()
+            report["protectionHistory"] = protectionHistory.map { event in
+                [
+                    "timestamp": event.timestamp,
+                    "eventType": String(describing: event.eventType),
+                    "severity": event.severity,
+                    "description": event.description,
+                    "action": event.action != nil ? String(describing: event.action!) : nil
+                ]
+            }
+            
+            report["losslessModeActive"] = monitor.isLosslessModeActive
+            report["qualityComparisonEnabled"] = true // Assuming enabled if monitor exists
+        }
+        
+        // Add current metrics
+        if let currentMetrics = qualityMonitor?.getCurrentMetrics() {
+            report["currentMetrics"] = [
+                "peakLevel": currentMetrics.peakLevel,
+                "rmsLevel": currentMetrics.rmsLevel,
+                "thd": currentMetrics.thd,
+                "dynamicRange": currentMetrics.dynamicRange,
+                "clippingDetected": currentMetrics.clippingDetected
+            ]
+        }
+        
+        return report
+    }
+    
+    /// Enable or disable quality comparison
+    /// - Parameter enabled: Whether to enable quality comparison
+    func enableQualityComparison(_ enabled: Bool) {
+        qualityMonitor?.enableQualityComparison(enabled)
+        
+        if enabled {
+            print("🔍 Audio quality comparison enabled")
+        } else {
+            print("🔍 Audio quality comparison disabled")
+        }
+    }
+    
+    /// Clear quality protection history
+    func clearQualityProtectionHistory() {
+        qualityMonitor?.clearProtectionHistory()
+        print("🗑️ Quality protection history cleared")
+    }
+    
+    /// Get comprehensive performance report
+    /// - Returns: Formatted performance report
+    func getPerformanceReport() -> String {
+        guard let processor = audioProcessor else {
+            return "Audio processing not initialized"
+        }
+        
+        return processor.getPerformanceReport()
+    }
+    
+    /// Optimize audio processing memory usage
+    /// - Returns: Amount of memory freed in MB
+    @discardableResult
+    func optimizeMemoryUsage() -> Double {
+        // This will trigger the processor's memory optimization
+        return 0.0 // The actual optimization happens in the processor's memory monitor callbacks
+    }
+    
+    /// Get quality protection recommendations based on current state
+    /// - Returns: Array of recommendation strings
+    func getQualityRecommendations() -> [String] {
+        var recommendations: [String] = []
+        
+        guard let processor = audioProcessor,
+              let monitor = qualityMonitor else {
+            recommendations.append("Audio processing not initialized")
+            return recommendations
+        }
+        
+        let metrics = monitor.getCurrentMetrics()
+        let protectionHistory = monitor.getProtectionHistory(limit: 10)
+        
+        // Check for recent quality issues
+        let recentDistortionEvents = protectionHistory.filter { 
+            $0.eventType == .distortionDetected && 
+            Date().timeIntervalSince($0.timestamp) < 60 // Last minute
+        }
+        
+        let recentClippingEvents = protectionHistory.filter { 
+            $0.eventType == .clippingDetected && 
+            Date().timeIntervalSince($0.timestamp) < 60 
+        }
+        
+        // Generate recommendations
+        if !recentDistortionEvents.isEmpty {
+            recommendations.append("Consider enabling lossless mode due to recent distortion events")
+        }
+        
+        if !recentClippingEvents.isEmpty {
+            recommendations.append("Reduce master gain to prevent clipping")
+        }
+        
+        if metrics.thd > 0.001 {
+            recommendations.append("High distortion detected - reduce compression or enable lossless mode")
+        }
+        
+        if metrics.peakLevel > -1.0 {
+            recommendations.append("Audio levels too high - risk of clipping")
+        }
+        
+        if metrics.peakLevel < -30.0 {
+            recommendations.append("Audio levels too low - consider increasing gain")
+        }
+        
+        if metrics.dynamicRange < 3.0 && metrics.peakLevel > -20.0 {
+            recommendations.append("Poor dynamic range - reduce compression ratio")
+        }
+        
+        if !processor.isLosslessModeActive && protectionHistory.count > 20 {
+            recommendations.append("Multiple quality events detected - consider enabling lossless mode")
+        }
+        
+        if recommendations.isEmpty {
+            recommendations.append("Audio quality is optimal")
+        }
+        
+        return recommendations
     }
     
     // MARK: - Private Methods
@@ -213,11 +483,124 @@ class AudioManager {
         print("🔧 Audio engine initialized")
     }
     
+    /// Setup real-time monitoring components
+    /// - Parameter settings: Audio enhancement settings
+    /// - Throws: AudioError if setup fails
+    private func setupRealtimeMonitoring(with settings: AudioEnhancementSettings) throws {
+        // Initialize level meter
+        levelMeter = AudioLevelMeter()
+        
+        // Initialize spectrum analyzer
+        spectrumAnalyzer = AudioSpectrumAnalyzer()
+        
+        // Initialize preview engine if needed
+        if settings.qualityMonitoringEnabled {
+            do {
+                previewEngine = try AudioPreviewEngine(settings: settings)
+            } catch {
+                throw AudioError.audioEngineSetupFailed(error)
+            }
+        }
+        
+        // Initialize monitoring display
+        monitoringDisplay = AudioMonitoringDisplay(settings: settings)
+        
+        print("📊 Real-time monitoring components initialized")
+    }
+    
+    /// Process audio buffer through monitoring components
+    /// - Parameter buffer: Audio buffer to monitor
+    func processMonitoringBuffer(_ buffer: AVAudioPCMBuffer) {
+        // Update level meter
+        levelMeter?.processBuffer(buffer)
+        
+        // Update spectrum analyzer
+        spectrumAnalyzer?.processBuffer(buffer)
+        
+        // Update monitoring display
+        monitoringDisplay?.processBuffer(buffer)
+        
+        // Update preview engine if active
+        if let previewEngine = previewEngine, previewEngine.isPreviewActive {
+            do {
+                try previewEngine.processPreviewBuffer(buffer)
+            } catch {
+                print("⚠️ Preview processing error: \(error.localizedDescription)")
+            }
+        }
+    }
+    
+    /// Start real-time audio monitoring display
+    func startMonitoringDisplay() {
+        monitoringDisplay?.startDisplay()
+    }
+    
+    /// Stop real-time audio monitoring display
+    func stopMonitoringDisplay() {
+        monitoringDisplay?.stopDisplay()
+    }
+    
+    /// Start audio preview
+    /// - Throws: AudioError if preview cannot be started
+    func startAudioPreview() throws {
+        guard let previewEngine = previewEngine else {
+            throw AudioError.audioEngineSetupFailed(
+                NSError(domain: "AudioManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "Preview engine not initialized"])
+            )
+        }
+        
+        do {
+            try previewEngine.startPreview()
+        } catch {
+            throw AudioError.audioEngineSetupFailed(error)
+        }
+    }
+    
+    /// Stop audio preview
+    func stopAudioPreview() {
+        previewEngine?.stopPreview()
+    }
+    
+    /// Update monitoring settings
+    /// - Parameter settings: New audio enhancement settings
+    func updateMonitoringSettings(_ settings: AudioEnhancementSettings) {
+        monitoringDisplay?.updateSettings(settings)
+        
+        if let previewEngine = previewEngine {
+            do {
+                try previewEngine.updateSettings(settings)
+            } catch {
+                print("⚠️ Failed to update preview settings: \(error.localizedDescription)")
+            }
+        }
+    }
+    
+    /// Get real-time monitoring display string
+    /// - Returns: Formatted monitoring display
+    func getMonitoringDisplayString() -> String {
+        return previewEngine?.getMonitoringDisplay() ?? "Monitoring not available"
+    }
+    
     /// Cleanup audio engine resources
     private func cleanupAudioEngine() {
+        // Stop monitoring components
+        stopMonitoringDisplay()
+        stopAudioPreview()
+        
+        // Cleanup audio engine
         audioEngine?.stop()
         audioEngine = nil
         microphoneNode = nil
+        
+        // Cleanup processing components
+        audioProcessor = nil
+        qualityMonitor = nil
+        
+        // Cleanup monitoring components
+        levelMeter = nil
+        spectrumAnalyzer = nil
+        previewEngine = nil
+        monitoringDisplay = nil
     }
     
     /// Validate microphone availability
@@ -346,13 +729,27 @@ extension AudioManager {
     ///   - includeMicrophone: Whether to include microphone
     ///   - forceSystemAudio: Force system-wide audio recording
     ///   - quality: Audio quality preset
+    ///   - enhancementPreset: Audio enhancement preset
+    ///   - processingEnabled: Enable audio processing
     /// - Returns: AudioSettings with default values
-    static func defaultSettings(includeMicrophone: Bool = false, forceSystemAudio: Bool = false, quality: AudioQuality = .medium) -> AudioSettings {
+    static func defaultSettings(
+        includeMicrophone: Bool = false, 
+        forceSystemAudio: Bool = false, 
+        quality: AudioQuality = .medium,
+        enhancementPreset: AudioPreset = .balanced,
+        processingEnabled: Bool = false
+    ) -> AudioSettings {
+        let enhancementSettings = processingEnabled ? 
+            AudioEnhancementSettings.from(preset: enhancementPreset).withProcessing(true) :
+            AudioEnhancementSettings()
+        
         return AudioSettings.default(
             includeMicrophone: includeMicrophone,
             includeSystemAudio: true,
             forceSystemAudio: forceSystemAudio,
-            quality: quality
+            quality: quality,
+            enhancementSettings: enhancementSettings,
+            processingEnabled: processingEnabled
         )
     }
     

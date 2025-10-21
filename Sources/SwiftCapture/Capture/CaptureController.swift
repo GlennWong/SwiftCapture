@@ -13,6 +13,11 @@ class CaptureController {
     private var currentStream: SCStream?
     private var isStreamStopped = false
     
+    /// Access to the current quality monitor for external validation
+    var qualityMonitor: AudioQualityMonitor? {
+        return currentDelegate?.audioQualityMonitor
+    }
+    
     /// Error types for capture operations
     enum CaptureError: LocalizedError {
         case contentRetrievalFailed(Error)
@@ -38,7 +43,7 @@ class CaptureController {
     }
     
     /// Delegate for handling capture output
-    private class CaptureDelegate: NSObject, SCStreamOutput {
+    private class CaptureDelegate: NSObject, SCStreamOutput, AudioLevelMeterDelegate, AudioSpectrumAnalyzerDelegate, AudioQualityMonitorDelegate {
         let videoInput: AVAssetWriterInput
         let audioInput: AVAssetWriterInput?
         let adaptor: AVAssetWriterInputPixelBufferAdaptor
@@ -54,18 +59,54 @@ class CaptureController {
         private var audioMixer: AVAudioMixerNode?
         private let includeMicrophone: Bool
         
+        // 音频处理管道
+        private var audioProcessor: AudioProcessor?
+        private var audioSettings: AudioSettings
+        private var processingQueue: DispatchQueue
+        private var audioBufferPool: [AVAudioPCMBuffer] = []
+        private let maxPoolSize: Int = 10
+        
+        // 实时监测组件
+        private var levelMeter: AudioLevelMeter?
+        private var spectrumAnalyzer: AudioSpectrumAnalyzer?
+        private var qualityMonitor: AudioQualityMonitor?
+        private var monitoringDisplay: AudioMonitoringDisplay?
+        
+        // 音频状态显示
+        private var audioStatusDisplay: AudioStatusDisplay?
+        
+        /// Access to quality monitor for external validation
+        var audioQualityMonitor: AudioQualityMonitor? {
+            return qualityMonitor
+        }
+        
         init(videoInput: AVAssetWriterInput, 
              audioInput: AVAssetWriterInput?, 
              adaptor: AVAssetWriterInputPixelBufferAdaptor, 
              writer: AVAssetWriter,
-             includeMicrophone: Bool = false) {
+             audioSettings: AudioSettings,
+             includeMicrophone: Bool = false,
+             audioStatusDisplay: AudioStatusDisplay? = nil) {
             self.videoInput = videoInput
             self.audioInput = audioInput
             self.adaptor = adaptor
             self.writer = writer
+            self.audioSettings = audioSettings
             self.includeMicrophone = includeMicrophone
+            self.processingQueue = DispatchQueue(label: "audioProcessingQueue", qos: .userInitiated)
+            self.audioStatusDisplay = audioStatusDisplay
             
             super.init()
+            
+            // 初始化音频处理器（如果启用了音频增强）
+            if audioSettings.hasEnhancement {
+                setupAudioProcessor()
+            }
+            
+            // 初始化实时监测组件（如果启用了质量监测）
+            if audioSettings.qualityMonitoringEnabled {
+                setupRealtimeMonitoring()
+            }
             
             // 如果需要麦克风，设置音频引擎
             if includeMicrophone {
@@ -112,8 +153,314 @@ class CaptureController {
             }
         }
         
+        /// 设置音频处理器
+        private func setupAudioProcessor() {
+            audioProcessor = AudioProcessor(settings: audioSettings.enhancementSettings)
+            print("🎛️ Audio processor initialized with preset: \(audioSettings.enhancementSettings.preset.rawValue)")
+            print("   Master Gain: \(audioSettings.enhancementSettings.masterGain) dB")
+            print("   Auto Gain: \(audioSettings.enhancementSettings.autoGainEnabled ? "enabled" : "disabled")")
+            print("   Quality Protection: \(audioSettings.enhancementSettings.qualityProtectionEnabled ? "enabled" : "disabled")")
+        }
+        
+        /// 设置实时监测组件
+        private func setupRealtimeMonitoring() {
+            // 初始化音频电平表
+            levelMeter = AudioLevelMeter()
+            levelMeter?.delegate = self
+            
+            // 初始化频谱分析器
+            spectrumAnalyzer = AudioSpectrumAnalyzer()
+            spectrumAnalyzer?.delegate = self
+            
+            // 初始化质量监测器
+            qualityMonitor = AudioQualityMonitor()
+            qualityMonitor?.delegate = self
+            
+            // 初始化监测显示（如果需要）
+            if audioSettings.enhancementSettings.qualityMonitoringEnabled {
+                monitoringDisplay = AudioMonitoringDisplay(settings: audioSettings.enhancementSettings)
+            }
+            
+            print("📊 Real-time audio monitoring initialized")
+            print("   Level Meter: enabled")
+            print("   Spectrum Analyzer: enabled") 
+            print("   Quality Monitor: enabled")
+            print("   Display Monitor: \(monitoringDisplay != nil ? "enabled" : "disabled")")
+        }
+        
+        /// 获取或创建音频缓冲区
+        private func getAudioBuffer(format: AVAudioFormat, frameCapacity: AVAudioFrameCount) -> AVAudioPCMBuffer? {
+            // 尝试从池中获取缓冲区
+            for (index, buffer) in audioBufferPool.enumerated() {
+                if buffer.format.isEqual(format) && buffer.frameCapacity >= frameCapacity {
+                    audioBufferPool.remove(at: index)
+                    buffer.frameLength = 0 // 重置长度
+                    return buffer
+                }
+            }
+            
+            // 创建新缓冲区
+            return AVAudioPCMBuffer(pcmFormat: format, frameCapacity: frameCapacity)
+        }
+        
+        /// 回收音频缓冲区到池中
+        private func recycleAudioBuffer(_ buffer: AVAudioPCMBuffer) {
+            guard audioBufferPool.count < maxPoolSize else { return }
+            buffer.frameLength = 0
+            audioBufferPool.append(buffer)
+        }
+        
+        /// 处理音频样本缓冲区
+        private func processAudioSampleBuffer(_ sampleBuffer: CMSampleBuffer) -> CMSampleBuffer? {
+            // 转换 CMSampleBuffer 到 AVAudioPCMBuffer 用于监测和处理
+            guard let audioBuffer = convertToAudioBuffer(sampleBuffer) else {
+                print("⚠️ Failed to convert CMSampleBuffer to AVAudioPCMBuffer")
+                return sampleBuffer
+            }
+            
+            var processedBuffer = audioBuffer
+            
+            // 应用音频处理（如果启用）
+            if let audioProcessor = audioProcessor, audioSettings.hasEnhancement {
+                let processingStartTime = CFAbsoluteTimeGetCurrent()
+                do {
+                    processedBuffer = try audioProcessor.processAudioBuffer(audioBuffer, settings: audioSettings.enhancementSettings)
+                    
+                    // 报告处理统计信息到状态显示
+                    let processingTime = CFAbsoluteTimeGetCurrent() - processingStartTime
+                    let metrics = audioProcessor.getAudioMetrics()
+                    audioStatusDisplay?.updateProcessingStats(
+                        processingTime: processingTime,
+                        peakLevel: metrics.peakLevel,
+                        rmsLevel: metrics.rmsLevel,
+                        thd: metrics.thd,
+                        gain: audioSettings.enhancementSettings.masterGain
+                    )
+                    
+                } catch {
+                    print("⚠️ Audio processing failed: \(error.localizedDescription)")
+                    audioStatusDisplay?.reportQualityIssue("Audio processing failed: \(error.localizedDescription)", severity: 0.8)
+                    processedBuffer = audioBuffer // 使用原始缓冲区作为后备
+                }
+            }
+            
+            // 更新实时监测组件
+            updateRealtimeMonitoring(with: processedBuffer)
+            
+            // 转换回 CMSampleBuffer
+            let result: CMSampleBuffer?
+            if processedBuffer === audioBuffer {
+                // 如果没有处理，直接返回原始缓冲区
+                result = sampleBuffer
+            } else {
+                // 转换处理后的缓冲区
+                result = convertToCMSampleBuffer(processedBuffer, originalSampleBuffer: sampleBuffer) ?? sampleBuffer
+            }
+            
+            // 回收缓冲区
+            recycleAudioBuffer(audioBuffer)
+            if processedBuffer !== audioBuffer {
+                recycleAudioBuffer(processedBuffer)
+            }
+            
+            return result
+        }
+        
+        /// 更新实时监测组件
+        private func updateRealtimeMonitoring(with buffer: AVAudioPCMBuffer) {
+            // 更新音频电平表
+            levelMeter?.processBuffer(buffer)
+            
+            // 更新频谱分析器
+            spectrumAnalyzer?.processBuffer(buffer)
+            
+            // 更新质量监测器
+            do {
+                try qualityMonitor?.processAudioBuffer(buffer)
+                
+                // 检查质量问题并报告给状态显示
+                if let qualityMonitor = qualityMonitor {
+                    let metrics = qualityMonitor.getCurrentMetrics()
+                    
+                    // 检查削波
+                    if metrics.clippingDetected {
+                        audioStatusDisplay?.reportClipping(at: metrics.peakLevel)
+                    }
+                    
+                    // 检查THD超标
+                    if metrics.thd > audioSettings.enhancementSettings.maxTHD {
+                        audioStatusDisplay?.reportQualityIssue(
+                            "THD exceeded threshold: \(String(format: "%.3f", metrics.thd * 100))%",
+                            severity: 0.6
+                        )
+                    }
+                }
+                
+            } catch {
+                // 质量监测错误不应该影响录制，只记录日志
+                if frameCount % 1000 == 0 { // 减少错误日志频率
+                    print("⚠️ Quality monitoring error: \(error.localizedDescription)")
+                    audioStatusDisplay?.reportQualityIssue("Quality monitoring error: \(error.localizedDescription)", severity: 0.4)
+                }
+            }
+            
+            // 更新监测显示
+            monitoringDisplay?.processBuffer(buffer)
+        }
+        
+        /// 将 CMSampleBuffer 转换为 AVAudioPCMBuffer
+        private func convertToAudioBuffer(_ sampleBuffer: CMSampleBuffer) -> AVAudioPCMBuffer? {
+            guard let formatDescription = CMSampleBufferGetFormatDescription(sampleBuffer) else {
+                return nil
+            }
+            
+            guard let audioStreamBasicDescription = CMAudioFormatDescriptionGetStreamBasicDescription(formatDescription) else {
+                return nil
+            }
+            
+            let audioFormat = AVAudioFormat(streamDescription: audioStreamBasicDescription)
+            guard let format = audioFormat else { return nil }
+            
+            let frameCount = CMSampleBufferGetNumSamples(sampleBuffer)
+            guard let audioBuffer = getAudioBuffer(format: format, frameCapacity: AVAudioFrameCount(frameCount)) else {
+                return nil
+            }
+            
+            audioBuffer.frameLength = AVAudioFrameCount(frameCount)
+            
+            // 复制音频数据
+            guard let blockBuffer = CMSampleBufferGetDataBuffer(sampleBuffer) else {
+                return nil
+            }
+            
+            var dataPointer: UnsafeMutablePointer<Int8>?
+            var lengthAtOffset: Int = 0
+            let status = CMBlockBufferGetDataPointer(blockBuffer, atOffset: 0, lengthAtOffsetOut: &lengthAtOffset, totalLengthOut: nil, dataPointerOut: &dataPointer)
+            
+            guard status == noErr, let data = dataPointer else {
+                return nil
+            }
+            
+            // 复制数据到 AVAudioPCMBuffer
+            let channelCount = Int(format.channelCount)
+            let bytesPerFrame = Int(format.streamDescription.pointee.mBytesPerFrame)
+            let _ = bytesPerFrame / channelCount // bytesPerSample not used in current implementation
+            
+            if let floatChannelData = audioBuffer.floatChannelData {
+                let sourceData = UnsafeRawPointer(data).bindMemory(to: Float.self, capacity: lengthAtOffset / MemoryLayout<Float>.size)
+                
+                if format.isInterleaved {
+                    // 交错格式：需要分离通道
+                    for frame in 0..<frameCount {
+                        for channel in 0..<channelCount {
+                            floatChannelData[channel][frame] = sourceData[frame * channelCount + channel]
+                        }
+                    }
+                } else {
+                    // 非交错格式：直接复制
+                    for channel in 0..<channelCount {
+                        let channelData = sourceData.advanced(by: channel * frameCount)
+                        floatChannelData[channel].update(from: channelData, count: frameCount)
+                    }
+                }
+            }
+            
+            return audioBuffer
+        }
+        
+        /// 将 AVAudioPCMBuffer 转换回 CMSampleBuffer
+        private func convertToCMSampleBuffer(_ audioBuffer: AVAudioPCMBuffer, originalSampleBuffer: CMSampleBuffer) -> CMSampleBuffer? {
+            // 这是一个简化的实现，实际项目中可能需要更复杂的转换
+            // 对于实时处理，通常直接修改原始缓冲区会更高效
+            
+            guard let formatDescription = CMSampleBufferGetFormatDescription(originalSampleBuffer) else {
+                return nil
+            }
+            
+            let frameCount = Int(audioBuffer.frameLength)
+            let channelCount = Int(audioBuffer.format.channelCount)
+            let bytesPerFrame = channelCount * MemoryLayout<Float>.size
+            let dataSize = frameCount * bytesPerFrame
+            
+            // 创建数据缓冲区
+            var blockBuffer: CMBlockBuffer?
+            let status = CMBlockBufferCreateWithMemoryBlock(
+                allocator: kCFAllocatorDefault,
+                memoryBlock: nil,
+                blockLength: dataSize,
+                blockAllocator: kCFAllocatorDefault,
+                customBlockSource: nil,
+                offsetToData: 0,
+                dataLength: dataSize,
+                flags: 0,
+                blockBufferOut: &blockBuffer
+            )
+            
+            guard status == noErr, let buffer = blockBuffer else {
+                return nil
+            }
+            
+            // 复制音频数据
+            var dataPointer: UnsafeMutablePointer<Int8>?
+            CMBlockBufferGetDataPointer(buffer, atOffset: 0, lengthAtOffsetOut: nil, totalLengthOut: nil, dataPointerOut: &dataPointer)
+            
+            if let data = dataPointer, let floatChannelData = audioBuffer.floatChannelData {
+                let floatData = UnsafeMutableRawPointer(data).bindMemory(to: Float.self, capacity: dataSize / MemoryLayout<Float>.size)
+                
+                if audioBuffer.format.isInterleaved {
+                    // 交错格式
+                    for frame in 0..<frameCount {
+                        for channel in 0..<channelCount {
+                            floatData[frame * channelCount + channel] = floatChannelData[channel][frame]
+                        }
+                    }
+                } else {
+                    // 非交错格式
+                    for channel in 0..<channelCount {
+                        let channelData = floatData.advanced(by: channel * frameCount)
+                        for frame in 0..<frameCount {
+                            channelData[frame] = floatChannelData[channel][frame]
+                        }
+                    }
+                }
+            }
+            
+            // 创建新的 CMSampleBuffer
+            var newSampleBuffer: CMSampleBuffer?
+            var timing = CMSampleTimingInfo()
+            let timingStatus = CMSampleBufferGetSampleTimingInfo(originalSampleBuffer, at: 0, timingInfoOut: &timing)
+            
+            guard timingStatus == noErr else {
+                return nil
+            }
+            
+            CMSampleBufferCreate(
+                allocator: kCFAllocatorDefault,
+                dataBuffer: buffer,
+                dataReady: true,
+                makeDataReadyCallback: nil,
+                refcon: nil,
+                formatDescription: formatDescription,
+                sampleCount: frameCount,
+                sampleTimingEntryCount: 1,
+                sampleTimingArray: [timing],
+                sampleSizeEntryCount: 0,
+                sampleSizeArray: nil,
+                sampleBufferOut: &newSampleBuffer
+            )
+            
+            return newSampleBuffer
+        }
+        
         func stopCapture() {
             shouldStop = true
+            
+            // 停止音频处理器
+            audioProcessor?.reset()
+            audioProcessor = nil
+            
+            // 清理音频缓冲区池
+            audioBufferPool.removeAll()
             
             // 停止麦克风录制
             if let audioEngine = audioEngine {
@@ -121,6 +468,8 @@ class CaptureController {
                 audioEngine.stop()
                 print("🎤 Microphone audio engine stopped")
             }
+            
+            print("🎵 Audio processing pipeline stopped")
         }
         
         func stream(_ stream: SCStream, didOutputSampleBuffer sampleBuffer: CMSampleBuffer, of outputType: SCStreamOutputType) {
@@ -157,18 +506,121 @@ class CaptureController {
                 }
             case .audio:
                 if let audioInput = audioInput, audioInput.isReadyForMoreMediaData && !shouldStop {
-                    let success = audioInput.append(sampleBuffer)
-                    audioSampleCount += 1
-                    if !success {
-                        print("⚠️ Failed to append audio sample at timestamp: \(CMTimeGetSeconds(timestamp))")
-                        print("   Audio samples: \(audioSampleCount), Audio input ready: \(audioInput.isReadyForMoreMediaData)")
-                    } else if audioSampleCount % 1000 == 0 { // Log every 1000 audio samples
-                        print("🎵 Audio samples processed: \(audioSampleCount) (timestamp: \(String(format: "%.2f", CMTimeGetSeconds(timestamp)))s)")
+                    // 在后台队列中处理音频以避免阻塞主录制流程
+                    processingQueue.async { [weak self] in
+                        guard let self = self else { return }
+                        
+                        // 应用音频处理（如果启用）
+                        let processedSampleBuffer = self.processAudioSampleBuffer(sampleBuffer) ?? sampleBuffer
+                        
+                        // 在主队列中写入处理后的音频
+                        DispatchQueue.main.async {
+                            guard !self.shouldStop && audioInput.isReadyForMoreMediaData else { return }
+                            
+                            let success = audioInput.append(processedSampleBuffer)
+                            self.audioSampleCount += 1
+                            
+                            if !success {
+                                print("⚠️ Failed to append processed audio sample at timestamp: \(CMTimeGetSeconds(timestamp))")
+                                print("   Audio samples: \(self.audioSampleCount), Audio input ready: \(audioInput.isReadyForMoreMediaData)")
+                            } else if self.audioSampleCount % 1000 == 0 { // Log every 1000 audio samples
+                                let processingStatus = self.audioProcessor != nil ? "enhanced" : "direct"
+                                print("🎵 Audio samples processed: \(self.audioSampleCount) (\(processingStatus), timestamp: \(String(format: "%.2f", CMTimeGetSeconds(timestamp)))s)")
+                            }
+                        }
                     }
                 }
             default:
                 break
             }
+        }
+        
+        /// 开始实时监测显示
+        func startMonitoringDisplay() {
+            monitoringDisplay?.startDisplay()
+        }
+        
+        /// 停止实时监测显示
+        func stopMonitoringDisplay() {
+            monitoringDisplay?.stopDisplay()
+        }
+        
+        /// 获取当前监测状态
+        func getMonitoringStatus() -> [String: Any] {
+            var status: [String: Any] = [
+                "frameCount": frameCount,
+                "audioSampleCount": audioSampleCount,
+                "processingEnabled": audioProcessor != nil,
+                "monitoringEnabled": levelMeter != nil
+            ]
+            
+            if let levelMeter = levelMeter {
+                status["audioLevels"] = [
+                    "peak": levelMeter.peakLevel,
+                    "rms": levelMeter.rmsLevel,
+                    "description": levelMeter.getLevelsDescription()
+                ]
+            }
+            
+            if let spectrumAnalyzer = spectrumAnalyzer {
+                status["spectrum"] = spectrumAnalyzer.getBandSpectrum()
+            }
+            
+            if let qualityMonitor = qualityMonitor {
+                let metrics = qualityMonitor.getCurrentMetrics()
+                status["quality"] = [
+                    "thd": metrics.thd,
+                    "clippingDetected": metrics.clippingDetected,
+                    "dynamicRange": metrics.dynamicRange
+                ]
+            }
+            
+            return status
+        }
+        
+        // MARK: - AudioLevelMeterDelegate
+        
+        func levelMeterUpdated(peak: Float, rms: Float) {
+            // 可以在这里添加实时电平监测的回调处理
+            // 例如：检测音频电平过低或过高的情况
+            if peak > -3.0 && frameCount % 100 == 0 { // 每100帧检查一次，避免过多日志
+                print("⚠️ Audio level approaching clipping: \(String(format: "%.1f", peak)) dBFS")
+            }
+        }
+        
+        // MARK: - AudioSpectrumAnalyzerDelegate
+        
+        func spectrumAnalyzerUpdated(magnitudes: [Float], frequencies: [Float]) {
+            // 可以在这里添加频谱分析的回调处理
+            // 例如：检测特定频率范围的能量分布
+        }
+        
+        // MARK: - AudioQualityMonitorDelegate
+        
+        func audioQualityUpdated(_ metrics: AudioMetrics) {
+            // 质量指标更新，可以用于实时质量监控
+        }
+        
+        func audioQualityIssueDetected(_ issue: String, severity: Float) {
+            // 音频质量问题检测
+            if severity > 0.5 {
+                print("⚠️ Audio quality issue in capture: \(issue)")
+            }
+        }
+        
+        func clippingDetected(at level: Float) {
+            // 削波检测
+            print("📢 Audio clipping detected in capture at \(String(format: "%.1f", level)) dBFS")
+        }
+        
+        func qualityDegradationDetected(originalMetrics: AudioMetrics, processedMetrics: AudioMetrics, recommendedAction: QualityProtectionAction) {
+            // 质量退化检测
+            print("🔍 Quality degradation detected in capture - recommended action: \(recommendedAction)")
+        }
+        
+        func losslessModeRecommended(reason: String) {
+            // 无损模式推荐
+            print("🔒 Lossless mode recommended in capture: \(reason)")
         }
     }
     
@@ -186,7 +638,8 @@ class CaptureController {
         writer: AVAssetWriter,
         videoInput: AVAssetWriterInput,
         audioInput: AVAssetWriterInput?,
-        adaptor: AVAssetWriterInputPixelBufferAdaptor
+        adaptor: AVAssetWriterInputPixelBufferAdaptor,
+        audioStatusDisplay: AudioStatusDisplay? = nil
     ) async throws -> SCStream {
         
         // 🔧 修复：对于应用录制，先将应用置于前台
@@ -225,7 +678,9 @@ class CaptureController {
             audioInput: audioInput,
             adaptor: adaptor,
             writer: writer,
-            includeMicrophone: config.audioSettings.includeMicrophone
+            audioSettings: config.audioSettings,
+            includeMicrophone: config.audioSettings.includeMicrophone,
+            audioStatusDisplay: audioStatusDisplay
         )
         
         // Store delegate reference for later use
@@ -255,6 +710,13 @@ class CaptureController {
                     try stream.addStreamOutput(delegate, type: .audio, sampleHandlerQueue: audioQueue)
                     if config.verbose {
                         print("✅ System audio stream added successfully")
+                        if config.audioSettings.hasEnhancement {
+                            print("🎛️ Audio enhancement pipeline enabled:")
+                            print("   Preset: \(config.audioSettings.enhancementSettings.preset.rawValue)")
+                            print("   Master Gain: \(config.audioSettings.enhancementSettings.masterGain) dB")
+                            print("   Auto Gain: \(config.audioSettings.enhancementSettings.autoGainEnabled ? "enabled" : "disabled")")
+                            print("   Quality Protection: \(config.audioSettings.enhancementSettings.qualityProtectionEnabled ? "enabled" : "disabled")")
+                        }
                     }
                 }
             } catch {
@@ -296,6 +758,9 @@ class CaptureController {
         // First tell the delegate to stop processing new frames
         currentDelegate?.stopCapture()
         
+        // Stop monitoring display before stopping capture
+        currentDelegate?.stopMonitoringDisplay()
+        
         do {
             try await stream.stopCapture()
         } catch {
@@ -312,6 +777,24 @@ class CaptureController {
         // Clear references
         currentDelegate = nil
         currentStream = nil
+    }
+    
+    /// Start real-time audio monitoring display
+    func startMonitoringDisplay() {
+        currentDelegate?.startMonitoringDisplay()
+    }
+    
+    /// Stop real-time audio monitoring display
+    func stopMonitoringDisplay() {
+        currentDelegate?.stopMonitoringDisplay()
+    }
+    
+    /// Get current monitoring status
+    /// - Returns: Dictionary with monitoring information
+    func getMonitoringStatus() -> [String: Any] {
+        return currentDelegate?.getMonitoringStatus() ?? [
+            "error": "No active capture session"
+        ]
     }
     
     /// Create ScreenCaptureKit stream configuration from recording configuration
