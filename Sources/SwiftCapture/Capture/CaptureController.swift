@@ -506,6 +506,10 @@ class CaptureController {
                 }
             case .audio:
                 if let audioInput = audioInput, audioInput.isReadyForMoreMediaData && !shouldStop {
+                    // Note: Using nonisolated(unsafe) to suppress Sendable warnings for AVFoundation types
+                    // This is safe because AVAssetWriterInput manages its own thread safety
+                    nonisolated(unsafe) let audioInputRef = audioInput
+                    
                     // 在后台队列中处理音频以避免阻塞主录制流程
                     processingQueue.async { [weak self] in
                         guard let self = self else { return }
@@ -514,15 +518,16 @@ class CaptureController {
                         let processedSampleBuffer = self.processAudioSampleBuffer(sampleBuffer) ?? sampleBuffer
                         
                         // 在主队列中写入处理后的音频
-                        DispatchQueue.main.async {
-                            guard !self.shouldStop && audioInput.isReadyForMoreMediaData else { return }
+                        DispatchQueue.main.async { [weak self] in
+                            guard let self = self else { return }
+                            guard !self.shouldStop && audioInputRef.isReadyForMoreMediaData else { return }
                             
-                            let success = audioInput.append(processedSampleBuffer)
+                            let success = audioInputRef.append(processedSampleBuffer)
                             self.audioSampleCount += 1
                             
                             if !success {
                                 print("⚠️ Failed to append processed audio sample at timestamp: \(CMTimeGetSeconds(timestamp))")
-                                print("   Audio samples: \(self.audioSampleCount), Audio input ready: \(audioInput.isReadyForMoreMediaData)")
+                                print("   Audio samples: \(self.audioSampleCount), Audio input ready: \(audioInputRef.isReadyForMoreMediaData)")
                             } else if self.audioSampleCount % 1000 == 0 { // Log every 1000 audio samples
                                 let processingStatus = self.audioProcessor != nil ? "enhanced" : "direct"
                                 print("🎵 Audio samples processed: \(self.audioSampleCount) (\(processingStatus), timestamp: \(String(format: "%.2f", CMTimeGetSeconds(timestamp)))s)")

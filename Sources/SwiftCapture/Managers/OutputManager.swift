@@ -794,26 +794,30 @@ class OutputManager {
         // We don't mark them here to avoid double-marking
         
         // Wait for writing to complete
-        try await withCheckedThrowingContinuation { continuation in
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
             if verbose {
                 print("💾 Calling writer.finishWriting...")
             }
             let startTime = Date()
             
+            // Note: Using nonisolated(unsafe) to suppress Sendable warnings for AVFoundation types
+            // This is safe because AVAssetWriter manages its own thread safety
+            nonisolated(unsafe) let writerRef = writer
             writer.finishWriting {
                 let duration = Date().timeIntervalSince(startTime)
+                
                 if verbose {
                     print("💾 finishWriting completion handler called after \(String(format: "%.2f", duration))s")
-                    let statusDescription = Self.writerStatusDescription(writer.status)
-                    print("   Final writer status: \(writer.status.rawValue) (\(statusDescription))")
+                    let statusDescription = Self.writerStatusDescription(writerRef.status)
+                    print("   Final writer status: \(writerRef.status.rawValue) (\(statusDescription))")
                 }
                 
-                if writer.status == .completed {
+                if writerRef.status == .completed {
                     if verbose {
                         print("✅ Writer finalization completed successfully")
                     }
                     continuation.resume()
-                } else if let error = writer.error {
+                } else if let error = writerRef.error {
                     if verbose {
                         print("❌ Writer finalization failed with error: \(error.localizedDescription)")
                         print("   Error domain: \(error.localizedDescription)")
@@ -822,12 +826,12 @@ class OutputManager {
                 } else {
                     if verbose {
                         print("❌ Writer finalization failed with unknown error")
-                        print("   Writer status: \(writer.status.rawValue)")
+                        print("   Writer status: \(writerRef.status.rawValue)")
                     }
                     let unknownError = NSError(
                         domain: "com.swiftcapture.output",
                         code: -1,
-                        userInfo: [NSLocalizedDescriptionKey: "Unknown writing error - status: \(writer.status.rawValue)"]
+                        userInfo: [NSLocalizedDescriptionKey: "Unknown writing error - status: \(writerRef.status.rawValue)"]
                     )
                     continuation.resume(throwing: OutputError.writerCreationFailed(unknownError))
                 }
