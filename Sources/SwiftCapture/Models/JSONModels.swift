@@ -6,7 +6,7 @@ import CoreGraphics
 /// JSON representation of screen information
 struct ScreenInfoJSON: Codable {
     let index: Int
-    let displayID: UInt32
+    // let displayID: UInt32
     let name: String
     let isPrimary: Bool
     let scaleFactor: Double
@@ -15,7 +15,7 @@ struct ScreenInfoJSON: Codable {
     
     init(from screenInfo: ScreenInfo) {
         self.index = screenInfo.index
-        self.displayID = screenInfo.displayID
+        // self.displayID = screenInfo.displayID
         self.name = screenInfo.name
         self.isPrimary = screenInfo.isPrimary
         self.scaleFactor = Double(screenInfo.scaleFactor)

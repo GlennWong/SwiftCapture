@@ -365,7 +365,15 @@ class OutputManager {
         // We don't mark them here to avoid double-marking
         
         // Wait for writing to complete
-        try await withCheckedThrowingContinuation { continuation in
+        // Note: We use UnsafeSendable wrapper to handle AVAssetWriter's non-Sendable nature
+        // This is safe because the writer is guaranteed to be alive during finalization
+        struct UnsafeSendable<T>: @unchecked Sendable {
+            let value: T
+        }
+        
+        let writerWrapper = UnsafeSendable(value: writer)
+        
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
             if verbose {
                 print("💾 Calling writer.finishWriting...")
             }
@@ -373,6 +381,8 @@ class OutputManager {
             
             writer.finishWriting {
                 let duration = Date().timeIntervalSince(startTime)
+                let writer = writerWrapper.value
+                
                 if verbose {
                     print("💾 finishWriting completion handler called after \(String(format: "%.2f", duration))s")
                     let statusDescription = Self.writerStatusDescription(writer.status)
